@@ -3,6 +3,8 @@ package api
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -13,10 +15,18 @@ import (
 const MaxMemoryLimit = 32 << 20
 
 // SetupCORS configures CORS allowing local Swagger UI, dev frontends, and external clients.
+// Set ALLOWED_ORIGINS (comma-separated, e.g. "https://azaman.example.com") in production;
+// when unset, all origins are allowed for local development.
 func SetupCORS() gin.HandlerFunc {
+	allowed := map[string]bool{}
+	for _, o := range strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowed[strings.TrimSuffix(o, "/")] = true
+		}
+	}
 	config := cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			return true // Allow all origins for Swagger UI, localhost:8080, 127.0.0.1, and dev frontends
+			return len(allowed) == 0 || allowed[origin]
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Session-ID"},
