@@ -14,6 +14,7 @@ var engineAssignedCategories = []string{
 	"Family & Favors", "Commercial & Business", "POS Cashout & Agency", "Personal Discretionary",
 	"Income & Retainers", "Loan Disbursement", "Internal Transfers", "Reversals & Refunds",
 	"Black Tax (Family Support)", "Recurring Obligations", "Ajo & Thrift", "Rent & Housing",
+	shazam.VendorCategory,
 }
 
 // TestCategoriesMatchSidecar keeps sidecar/categories.json in sync with every Go category, so a

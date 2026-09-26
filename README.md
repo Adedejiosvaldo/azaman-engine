@@ -150,7 +150,11 @@ In Nigeria's informal economy, millions of businesses operate using personal acc
    Recipients matching `POS`, `Agent`, `Cashout`, or colloquial operator nicknames (e.g. `Bode Man`) are routed to **POS Cashout & Agency**, NOT Family favors.
 2. **Commercial Entity Suffix Check**:
    Names containing commercial keywords (`Ventures`, `Enterprises`, `Stores`, `Logistics`, `Pharmacy`, `Farms`, `Tech`, `Saloon`, `Motors`, `Bakery`, `Kitchen`, `Plaza`, `Limited`, `Nig Ltd`) are classified as **Commercial & Business Operating Expenses**.
-3. **P2P Micro-Transfers**:
+3. **Market Vendors on Personal Accounts**:
+   Transfers to recipients banking with Moniepoint (`| MONIE POINT |`) are routed to **Market & Small Vendors**. Most such accounts belong to traders and POS merchants, even when they are in a personal name. Vendors are never counted as Urgent 2k.
+4. **Your Own Labels**:
+   Every person row in the dashboard has 🏪 Vendor / 👪 Family buttons. Labels are stored only in your browser (`localStorage`) and sent with each audit as repeatable `vendor` / `family` form fields. They override every heuristic and the AI pass; name order and partial names are fine.
+5. **P2P Micro-Transfers**:
    Recipients without commercial suffixes are classified as **Family & Favors**.
 
 ---

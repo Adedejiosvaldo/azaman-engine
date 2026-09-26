@@ -46,7 +46,7 @@ func TestDetectReversals(t *testing.T) {
 func TestDetectSelfTransfers(t *testing.T) {
 	txs := []models.DecodedTransaction{
 		debit("Transfer to BALOGUN, OLUMIDE CHINEDU | Kuda MFB", 1050, t0), // holder, reordered
-		debit("Transfer to FAVOUR IFEOLUWA BALOGUN | OPay", 5000, t0),    // sibling: shared surname only
+		debit("Transfer to FAVOUR IFEOLUWA BALOGUN | OPay", 5000, t0),      // sibling: shared surname only
 		credit("Add Money-Bank Card | Guaranty Trust Bank", 2000, t0),      // own card top-up
 		{RawDescription: "Auto-save to OWealth", Amount: -8390, Debit: 8390, Flags: models.TransactionFlags{IsSavings: true, IsMidnightLeak: true}},
 	}
@@ -170,5 +170,28 @@ func TestRunwayUsesNewestBalanceAndWeightedBurn(t *testing.T) {
 	}
 	if s.WeightedMonthlyBurn <= s.AvgMonthlyBurn {
 		t.Errorf("weighted burn %.2f should exceed flat %.2f when spend is rising", s.WeightedMonthlyBurn, s.AvgMonthlyBurn)
+	}
+}
+
+func TestApplyContactLabels(t *testing.T) {
+	txs := []models.DecodedTransaction{
+		debit("Transfer to NGOZI AMAKA OBI | OPay | 1560803617", 2000, t0),
+		debit("Transfer to  BELLO RUKAYAT ASABI | MONIE POINT | 7752139889", 1000, t0),
+		debit("Transfer to SAMUEL DAVID EKPO | OPay | 111", 700, t0),
+	}
+	txs[0].Category, txs[0].Flags.IsUrgent2k = "Family & Favors", true
+	txs[1].Category = "Market & Small Vendors"
+
+	// Label order and partial names are fine; "Rukayat Bello" is my aunt, "obi ngozi" sells me provisions.
+	ApplyContactLabels(txs, []string{"obi ngozi"}, []string{"Rukayat Bello"}, "Market & Small Vendors")
+
+	if txs[0].Category != "Market & Small Vendors" || txs[0].Flags.IsUrgent2k || txs[0].Confidence != 1 {
+		t.Errorf("vendor label not applied: %+v", txs[0])
+	}
+	if txs[1].Category != "Family & Favors" || txs[1].Confidence != 1 {
+		t.Errorf("family label should override the Moniepoint vendor guess: %+v", txs[1])
+	}
+	if txs[2].Confidence == 1 {
+		t.Errorf("unlabelled contact must be untouched")
 	}
 }

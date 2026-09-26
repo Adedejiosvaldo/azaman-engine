@@ -64,3 +64,28 @@ func TestSavingsAndLoansAreNotIncomeOrFavors(t *testing.T) {
 		t.Errorf("loan disbursement must not be income: %+v %s", loan.Flags, loan.Category)
 	}
 }
+
+func TestMoniepointRecipientIsVendorNotFamily(t *testing.T) {
+	d := MatchAndDecode(models.RawTransaction{
+		Description: "Transfer to  BELLO RUKAYAT ASABI | MONIE POINT | 7752139889",
+		Debit:       1000,
+	})
+	if d.Category != VendorCategory || d.Flags.IsUrgent2k {
+		t.Errorf("Moniepoint recipient should be a vendor purchase, got %q urgent2k=%v", d.Category, d.Flags.IsUrgent2k)
+	}
+
+	fam := MatchAndDecode(models.RawTransaction{
+		Description: "Transfer to FAVOUR IFEOLUWA BALOGUN | OPay | 4906137089",
+		Debit:       5000,
+	})
+	if fam.Category != "Family & Favors" || !fam.Flags.IsUrgent2k {
+		t.Errorf("OPay personal transfer should stay a favor, got %q", fam.Category)
+	}
+}
+
+func TestBusinessTransferIsNotUrgent2k(t *testing.T) {
+	d := MatchAndDecode(models.RawTransaction{Description: "Transfer to HNG TECH LIMITED | CARBON | 0193411483", Debit: 5000})
+	if d.Flags.IsUrgent2k {
+		t.Errorf("payment to a company must not be an Urgent 2k favor")
+	}
+}

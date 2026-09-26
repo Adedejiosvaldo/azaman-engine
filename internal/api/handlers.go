@@ -146,6 +146,9 @@ func HandleAudit(c *gin.Context) {
 		decodedTxs[i] = shazam.MatchAndDecode(raw)
 	}
 
+	// 6a. User labels: people the user marked as vendors or family in the dashboard (kept in their browser only)
+	analyzer.ApplyContactLabels(decodedTxs, c.PostFormArray("vendor"), c.PostFormArray("family"), shazam.VendorCategory)
+
 	// 6b. Optional Laya AI System 1 Decision Pass for Ambiguous/Low-Confidence Memos
 	layaClient := ai.GetLayaClient()
 	if layaClient.IsAvailable() {

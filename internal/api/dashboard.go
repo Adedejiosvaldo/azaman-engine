@@ -103,6 +103,11 @@ func HandleDashboard(c *gin.Context) {
     .upload-icon { font-size: 40px; margin-bottom: 12px; }
     .upload-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
     .upload-desc { color: var(--muted); font-size: 13px; }
+    .labels-bar { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+    .chip { background: #1f2937; border: 1px solid #374151; border-radius: 999px; padding: 4px 10px; color: var(--text); }
+    .chip button { background: none; border: none; color: var(--muted); cursor: pointer; margin-left: 4px; }
+    .label-btn { background: #1f2937; border: 1px solid #374151; border-radius: 6px; color: var(--text); cursor: pointer; font-size: 11px; padding: 2px 6px; margin-top: 4px; margin-right: 4px; }
+    .label-btn:hover { border-color: var(--accent); }
     .form-row {
       position: relative;
       z-index: 2; /* sit above the full-card invisible file input so the button and password field are clickable */
@@ -246,6 +251,7 @@ func HandleDashboard(c *gin.Context) {
         <button class="btn" id="uploadBtn" onclick="uploadStatement()">Shazam Statement ⚡</button>
       </div>
     </div>
+    <div id="labels-bar" class="labels-bar hidden"></div>
     <div id="spinner"></div>
 
     <div id="results" class="hidden">
@@ -348,6 +354,61 @@ func HandleDashboard(c *gin.Context) {
       }
     });
 
+    // ---- Contact labels: kept only in this browser (localStorage), sent with each audit ----
+    const LABELS_KEY = 'azaman.labels';
+    const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    function loadLabels() {
+      try {
+        const l = JSON.parse(localStorage.getItem(LABELS_KEY)) || {};
+        return { vendor: l.vendor || [], family: l.family || [] };
+      } catch (e) { return { vendor: [], family: [] }; }
+    }
+
+    function saveLabels(l) {
+      localStorage.setItem(LABELS_KEY, JSON.stringify(l));
+      renderLabels();
+    }
+
+    function counterpartyName(desc) {
+      const m = desc.match(/Transfer (?:to|from)\s+([^|/]+)/i);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    }
+
+    function setLabel(kind, name) {
+      const l = loadLabels();
+      const key = name.toLowerCase();
+      l.vendor = l.vendor.filter(n => n.toLowerCase() !== key);
+      l.family = l.family.filter(n => n.toLowerCase() !== key);
+      l[kind].push(name);
+      saveLabels(l);
+      uploadStatement(); // re-run the audit with the new label
+    }
+
+    function removeLabel(kind, name) {
+      const l = loadLabels();
+      l[kind] = l[kind].filter(n => n !== name);
+      saveLabels(l);
+    }
+
+    function renderLabels() {
+      const l = loadLabels();
+      const bar = document.getElementById('labels-bar');
+      const chips = [];
+      l.vendor.forEach(n => chips.push('<span class="chip">🏪 ' + esc(n) + '<button data-remove="vendor" data-name="' + esc(n) + '">×</button></span>'));
+      l.family.forEach(n => chips.push('<span class="chip">👪 ' + esc(n) + '<button data-remove="family" data-name="' + esc(n) + '">×</button></span>'));
+      bar.innerHTML = chips.length ? 'Your labels (saved in this browser only): ' + chips.join('') : '';
+      bar.classList.toggle('hidden', chips.length === 0);
+    }
+
+    document.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.kind) setLabel(b.dataset.kind, b.dataset.name);
+      if (b.dataset.remove) removeLabel(b.dataset.remove, b.dataset.name);
+    });
+    renderLabels();
+
     async function uploadStatement() {
       const file = document.getElementById('fileInput').files[0];
       if (!file) {
@@ -359,6 +420,9 @@ func HandleDashboard(c *gin.Context) {
       formData.append('statement', file);
       const pwd = document.getElementById('pdfPassword').value;
       if (pwd) formData.append('password', pwd);
+      const labels = loadLabels();
+      labels.vendor.forEach(n => formData.append('vendor', n));
+      labels.family.forEach(n => formData.append('family', n));
 
       document.getElementById('spinner').style.display = 'block';
       document.getElementById('results').classList.add('hidden');
@@ -424,12 +488,20 @@ func HandleDashboard(c *gin.Context) {
         const amtColor = tx.amount > 0 ? 'color: var(--accent);' : 'color: var(--text);';
         const sign = tx.amount > 0 ? '+' : '';
 
-        tr.innerHTML = 
-          '<td style="font-family: \'JetBrains Mono\', monospace; font-size: 12px; color: var(--muted);">' + (tx.date || '') + '</td>' +
-          '<td><strong>' + (tx.merchant || 'General') + '</strong><div style="font-size: 11px; color: var(--muted);">' + (tx.raw_description || '') + '</div></td>' +
-          '<td>' + (tx.category || '') + '</td>' +
-          '<td><span style="font-size: 12px; color: var(--muted);">' + (tx.classification || '') + '</span></td>' +
-          '<td style="font-family: \'JetBrains Mono\', monospace; font-weight: 700; ' + amtColor + '">' + sign + fmtNaira(tx.amount) + '</td>' +
+        const person = counterpartyName(tx.raw_description || '');
+        let labelBtns = '';
+        if (person && tx.amount < 0) {
+          labelBtns = '<div>' +
+            '<button class="label-btn" data-kind="vendor" data-name="' + esc(person) + '" title="I buy from this person">🏪 Vendor</button>' +
+            '<button class="label-btn" data-kind="family" data-name="' + esc(person) + '" title="Family or friend">👪 Family</button></div>';
+        }
+
+        tr.innerHTML =
+          '<td style="font-family: JetBrains Mono, monospace; font-size: 12px; color: var(--muted);">' + esc(tx.date || '') + '</td>' +
+          '<td><strong>' + esc(tx.merchant || 'General') + '</strong><div style="font-size: 11px; color: var(--muted);">' + esc(tx.raw_description || '') + '</div>' + labelBtns + '</td>' +
+          '<td>' + esc(tx.category || '') + '</td>' +
+          '<td><span style="font-size: 12px; color: var(--muted);">' + esc(tx.classification || '') + '</span></td>' +
+          '<td style="font-family: JetBrains Mono, monospace; font-weight: 700; ' + amtColor + '">' + sign + fmtNaira(tx.amount) + '</td>' +
           '<td><span class="confidence">' + (tx.confidence * 100).toFixed(0) + '%</span></td>' +
           '<td>' + (flags || '<span style="color: var(--muted); font-size: 11px;">—</span>') + '</td>';
         tbody.appendChild(tr);

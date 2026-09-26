@@ -357,3 +357,79 @@ func coefficientOfVariation(v []float64) float64 {
 func round2(v float64) float64 {
 	return math.Round(v*100) / 100
 }
+
+// ApplyContactLabels applies the user's own labels for people they pay. Many Nigerian traders use
+// personal-name accounts, so only the user can reliably say "this name is my vendor, not family".
+// A label matches when all its name tokens appear in the counterparty name (order-insensitive).
+// Labelled rows get confidence 1.0 so no later AI pass overrides them.
+func ApplyContactLabels(txs []models.DecodedTransaction, vendors, family []string, vendorCategory string) {
+	type label struct {
+		tokens   []string
+		isVendor bool
+	}
+	var labels []label
+	for _, v := range vendors {
+		if t := nameTokens(v); len(t) > 0 {
+			labels = append(labels, label{t, true})
+		}
+	}
+	for _, f := range family {
+		if t := nameTokens(f); len(t) > 0 {
+			labels = append(labels, label{t, false})
+		}
+	}
+	if len(labels) == 0 {
+		return
+	}
+
+	for i := range txs {
+		tx := &txs[i]
+		cp := counterparty(tx.RawDescription)
+		if cp == "" || tx.Flags.IsBankFee {
+			continue
+		}
+		have := make(map[string]bool)
+		for _, t := range nameTokens(cp) {
+			have[t] = true
+		}
+		for _, l := range labels {
+			if !containsAllTokens(have, l.tokens) {
+				continue
+			}
+			name := titleWords(cp)
+			if l.isVendor {
+				tx.Merchant = name + " (Vendor)"
+				tx.Category = vendorCategory
+				tx.Classification = "Personal Purchase"
+				tx.Flags.IsUrgent2k = false
+			} else {
+				tx.Merchant = "Transfer to " + name
+				if tx.Credit > 0 {
+					tx.Merchant = "Transfer from " + name
+				}
+				tx.Category = "Family & Favors"
+				tx.Classification = "Family Support"
+				tx.Flags.IsUrgent2k = tx.Debit >= 1000 && tx.Debit <= 15000
+			}
+			tx.Confidence = 1.0
+			break
+		}
+	}
+}
+
+func containsAllTokens(have map[string]bool, want []string) bool {
+	for _, t := range want {
+		if !have[t] {
+			return false
+		}
+	}
+	return true
+}
+
+func titleWords(s string) string {
+	words := nameTokens(s)
+	for i, w := range words {
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	return strings.Join(words, " ")
+}

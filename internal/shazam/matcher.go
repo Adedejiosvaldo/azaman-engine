@@ -117,16 +117,19 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 	if !isCredit && !isNonFavor && (currency == "NGN" || currency == "") && absAmount >= 1000 && absAmount <= 15000 {
 		lowerDesc := strings.ToLower(raw.Description)
 		lowerClean := strings.ToLower(cleaned)
-		if decoded.Category == "Family & Favors" ||
+		// Generic transfer wording only counts for person-to-person rows; vendors, businesses and
+		// POS agents paid by transfer are purchases, not favors. An explicit "urgent" memo always counts.
+		personal := decoded.Category == "Family & Favors" || decoded.Category == "" ||
+			decoded.Category == "Uncategorized" || decoded.Category == "Personal Discretionary"
+		explicit := strings.Contains(lowerClean, "urgent") || strings.Contains(lowerDesc, "urgent")
+		if explicit || (personal && (decoded.Category == "Family & Favors" ||
 			decoded.Classification == "Micro-Transfer (Urgent 2k)" ||
 			strings.Contains(lowerClean, "transfer to") ||
 			strings.Contains(lowerDesc, "nip/dr") ||
 			strings.Contains(lowerClean, "favors") ||
-			strings.Contains(lowerClean, "urgent") ||
-			strings.Contains(lowerDesc, "urgent") ||
 			strings.Contains(lowerClean, "upkeep") ||
 			strings.Contains(lowerClean, "mum") ||
-			strings.Contains(lowerClean, "family") {
+			strings.Contains(lowerClean, "family"))) {
 			decoded.Flags.IsUrgent2k = true
 			decoded.Classification = "Micro-Transfer (Urgent 2k)"
 			if decoded.Category == "Uncategorized" || decoded.Category == "" {
@@ -204,7 +207,17 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 			}
 		}
 
-		// 3. Genuine Family & Favors transfer
+		// 3. Recipient banks with Moniepoint are overwhelmingly traders and market vendors
+		// (business accounts and POS terminals), even when the account is in a personal name.
+		if isVendorBank(rawMemo) {
+			d.Merchant = titleCase(name) + " (Vendor)"
+			d.Category = VendorCategory
+			d.Classification = "Personal Purchase"
+			d.Confidence = 0.9
+			return
+		}
+
+		// 4. Genuine Family & Favors transfer
 		d.Merchant = "Transfer to " + titleCase(name)
 		d.Category = "Family & Favors"
 		d.Classification = "Micro-Transfer (Urgent 2k)"
@@ -227,6 +240,27 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 	d.Category = "Personal Discretionary"
 	d.Classification = "Personal Discretionary"
 	d.Confidence = 0.70
+}
+
+// VendorCategory holds payments to traders and market sellers who use personal-name accounts.
+const VendorCategory = "Market & Small Vendors"
+
+// vendorBanks are recipient banks whose personal-name accounts are mostly traders and POS merchants.
+var vendorBanks = []string{"monie point", "moniepoint"}
+
+// isVendorBank checks the bank segment of "Transfer to NAME | BANK | ACCOUNT" style memos.
+func isVendorBank(rawMemo string) bool {
+	parts := strings.Split(rawMemo, "|")
+	if len(parts) < 2 {
+		return false
+	}
+	bank := strings.ToLower(parts[1])
+	for _, b := range vendorBanks {
+		if strings.Contains(bank, b) {
+			return true
+		}
+	}
+	return false
 }
 
 func titleCase(s string) string {
