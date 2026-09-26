@@ -16,16 +16,25 @@ func GenerateAudit(
 	fileFormat string,
 	fileSize int64,
 	startTime time.Time,
+	accountHolder string,
 ) models.AuditReport {
+	// 0. Nigerian-specific pre-passes on a private copy. Order matters: reversals cancel failed
+	// debits first, then self/savings transfers drop out, then recurring payments leave Urgent 2k.
+	txs := make([]models.DecodedTransaction, len(rawTxs))
+	copy(txs, rawTxs)
+	reversalsReport := DetectReversals(txs)
+	internalReport := DetectSelfTransfers(txs, accountHolder)
+	recurring := DetectRecurring(txs)
+
 	// 1. Detect duplicates and get enriched transactions with duplicate flags
-	duplicateReport, enrichedTxs := AnalyzeDuplicates(rawTxs)
+	duplicateReport, enrichedTxs := AnalyzeDuplicates(txs)
 
 	// 2. Compute total discretionary outflow for midnight baseline
 	var totalDiscretionary float64
 	categoryTotals := make(map[string]*models.CategoryBreakdown)
 
 	for _, tx := range enrichedTxs {
-		if tx.Amount < 0 && tx.Debit > 0 {
+		if tx.IsSpend() {
 			if tx.Classification == "Personal Discretionary" || tx.Category == "Late Night Food & Lounges" || tx.Category == "Food & Dining" || tx.Category == "Commute & Transit" {
 				totalDiscretionary += tx.Debit
 			}
@@ -56,6 +65,10 @@ func GenerateAudit(
 	urgent2kReport := AnalyzeUrgent2k(enrichedTxs, periodDays)
 	bankChargesReport := AnalyzeBankCharges(enrichedTxs)
 	summary := CalculateRunway(enrichedTxs, periodDays)
+	summary.AccountHolder = accountHolder
+	insights := AnalyzeInsights(enrichedTxs, internalReport, recurring, summary)
+	taxEstimate := EstimateTax(enrichedTxs, periodDays, summary.Currency)
+	businessSplit := AnalyzeBusinessSplit(enrichedTxs)
 
 	// 5. Total leak burn & percentage
 	totalLeakBurn := midnightReport.TotalAmount + urgent2kReport.TotalAmount + duplicateReport.TotalPotentialRefund + bankChargesReport.TotalCharges
@@ -65,11 +78,11 @@ func GenerateAudit(
 	}
 
 	cashLeaks := models.CashLeaks{
-		MidnightLeak:                midnightReport,
-		Urgent2k:                    urgent2kReport,
-		DuplicateDebits:             duplicateReport,
-		BankCharges:                 bankChargesReport,
-		TotalLeakBurn:               math.Round(totalLeakBurn*100) / 100,
+		MidnightLeak:                 midnightReport,
+		Urgent2k:                     urgent2kReport,
+		DuplicateDebits:              duplicateReport,
+		BankCharges:                  bankChargesReport,
+		TotalLeakBurn:                math.Round(totalLeakBurn*100) / 100,
 		TotalLeakPercentageOfOutflow: math.Round(totalLeakPct*100) / 100,
 	}
 
@@ -103,6 +116,11 @@ func GenerateAudit(
 		Summary:      summary,
 		CashLeaks:    cashLeaks,
 		Categories:   categories,
+		Reversals:    reversalsReport,
+		Internal:     internalReport,
+		Insights:     insights,
+		Tax:          taxEstimate,
+		Business:     businessSplit,
 		Transactions: enrichedTxs,
 		BankDetected: bankName,
 		AuditMeta:    meta,

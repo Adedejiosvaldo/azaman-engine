@@ -17,7 +17,7 @@ func AnalyzeMidnight(txs []models.DecodedTransaction, totalDiscretionary float64
 
 	for _, tx := range txs {
 		// Only consider debits
-		if tx.Amount >= 0 || tx.Debit <= 0 {
+		if !tx.IsSpend() {
 			continue
 		}
 

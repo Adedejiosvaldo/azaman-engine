@@ -28,7 +28,7 @@ func AnalyzeDuplicates(txs []models.DecodedTransaction) (models.DuplicateDebitsR
 	var debits []debitRef
 	for i := range enrichedTxs {
 		tx := &enrichedTxs[i]
-		if tx.Amount < 0 && tx.Debit > 0 && !tx.Flags.IsBankFee {
+		if tx.IsSpend() && !tx.Flags.IsBankFee && !tx.Flags.IsRecurring {
 			debits = append(debits, debitRef{index: i, tx: tx})
 		}
 	}

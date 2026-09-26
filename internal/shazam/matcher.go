@@ -12,7 +12,7 @@ import (
 
 var (
 	// Recipient name extractor for P2P transfers: "TRANSFER TO JOHN DOE" -> "John Doe"
-	toNameRe = regexp.MustCompile(`(?i)(?:TRANSFER\s+TO|SENT\s+TO|PAYMENT\s+TO|TRF\s+TO|NIP/DR/[^/]+/)\s*([A-Za-z\s]{3,30})`)
+	toNameRe   = regexp.MustCompile(`(?i)(?:TRANSFER\s+TO|SENT\s+TO|PAYMENT\s+TO|TRF\s+TO|NIP/DR/[^/]+/)\s*([A-Za-z\s]{3,30})`)
 	fromNameRe = regexp.MustCompile(`(?i)(?:TRANSFER\s+FROM|RECEIVED\s+FROM|TRF\s+FROM|NIP/CR/[^/]+/)\s*([A-Za-z\s]{3,30})`)
 )
 
@@ -59,6 +59,10 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		decoded.Date = raw.ParsedDate.Format("2006-01-02 15:04:05")
 	}
 
+	// Date-only statements parse to exactly 00:00:00; treat that as "time unknown", not midnight.
+	hasTime := !raw.ParsedDate.IsZero() &&
+		(raw.ParsedDate.Hour() != 0 || raw.ParsedDate.Minute() != 0 || raw.ParsedDate.Second() != 0)
+
 	// 1. Try matching against our curated merchant dictionary
 	rule := FindRuleByKeyword(cleaned)
 	if rule != nil {
@@ -67,11 +71,19 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		decoded.Classification = rule.Classification
 		decoded.Confidence = rule.Confidence
 		decoded.Flags.IsBankFee = rule.IsFee
-		decoded.Flags.IsIncome = rule.IsIncome || isCredit
+		decoded.Flags.IsSavings = rule.IsSavings
+		decoded.Flags.IsLoan = rule.IsLoan
+		// Loan disbursements and savings withdrawals are cash in, but not income.
+		decoded.Flags.IsIncome = rule.IsIncome || (isCredit && !rule.IsLoan && !rule.IsSavings)
 		decoded.Flags.IsTaxDeductible = rule.IsTechVendor
+		decoded.Flags.IsBusiness = rule.IsTechVendor || (rule.IsIncome && isCredit)
+		if rule.IsLoan && isCredit {
+			decoded.Category = "Loan Disbursement"
+			decoded.Classification = "Borrowed Funds"
+		}
 
-		// Check if midnight leak candidate
-		if rule.IsLateNight && !isCredit {
+		// Known late-night merchant: only assume midnight when the statement has no time of day
+		if rule.IsLateNight && !isCredit && !hasTime {
 			decoded.Flags.IsMidnightLeak = true
 			if decoded.TimeWindow == "" {
 				decoded.TimeWindow = "Late Night (Discretionary)"
@@ -83,10 +95,10 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 	}
 
 	// 3. Time-based midnight verification if ParsedDate contains time
-	if !raw.ParsedDate.IsZero() {
+	if hasTime {
 		hour := raw.ParsedDate.Hour()
 		if hour >= 22 || hour <= 3 {
-			// Midnight window: 10 PM - 3 AM
+			// Midnight window: 22:00 - 03:59
 			if !isCredit && decoded.Classification == "Personal Discretionary" {
 				decoded.Flags.IsMidnightLeak = true
 			}
@@ -101,7 +113,8 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 	}
 
 	// 4. Urgent 2k detection: Micro-transfers between ₦1,000 and ₦15,000 to individuals/favors
-	if !isCredit && (currency == "NGN" || currency == "") && absAmount >= 1000 && absAmount <= 15000 {
+	isNonFavor := decoded.Flags.IsSavings || decoded.Flags.IsLoan || decoded.Flags.IsBankFee
+	if !isCredit && !isNonFavor && (currency == "NGN" || currency == "") && absAmount >= 1000 && absAmount <= 15000 {
 		lowerDesc := strings.ToLower(raw.Description)
 		lowerClean := strings.ToLower(cleaned)
 		if decoded.Category == "Family & Favors" ||
@@ -177,11 +190,12 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 			"global", "service", "services", "logistics", "pharmacy", "farm", "farms",
 			"tech", "salon", "saloon", "motors", "spares", "bakery", "kitchen",
 			"buka", "supermarket", "consulting", "holding", "holdings", "ltd",
-			"limited", "plc", "nig", "pg", "pay", "solutions", "plaza", "agency",
+			"limited", "plc", "nig", "ent", "co", "pg", "pay", "solutions", "plaza", "agency",
 			"electrical", "electricals", "clinic", "hospital", "hotel", "suites",
 		}
 		for _, b := range businessSuffixes {
-			if strings.Contains(lowerName, b) {
+			if matchPattern(lowerName, b) {
+				d.Flags.IsBusiness = true
 				d.Merchant = titleCase(name)
 				d.Category = "Commercial & Business"
 				d.Classification = "Operating Expense"

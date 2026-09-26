@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Benchmarks
 
-Nigerian bank statements (OPay, GTBank, Kuda, Moniepoint, Access Bank, Geegpay) are notoriously noisy — filled with clearinghouse settlement routing codes (`NIP/DR/`, `SENT 01655551`), 20-digit transaction session IDs, and truncated narrations.
+Nigerian bank statements (OPay, PalmPay, GTBank, Kuda, Moniepoint, Access, Zenith, First Bank, UBA, Wema/ALAT, Fidelity, Sterling, FCMB, Stanbic IBTC, Geegpay) are notoriously noisy — filled with clearinghouse settlement routing codes (`NIP/DR/`, `SENT 01655551`), 20-digit transaction session IDs, and truncated narrations.
 
 **Azaman Engine** acts as a *"Shazam for Financial Statements"*:
 - Takes any statement (PDF, CSV, Excel, TSV) directly into memory.
@@ -25,7 +25,7 @@ Nigerian bank statements (OPay, GTBank, Kuda, Moniepoint, Access Bank, Geegpay) 
 | Statement Dataset | Pages / Rows | Processing Time | Memory Persisted | Accuracy / Leaks Identified |
 | :--- | :--- | :--- | :--- | :--- |
 | **OPay Annual Statement (PDF)** | **559 pages (9,931 txs)** | **4.2 seconds** | **0 bytes** | ₦4.12M leaks (820 Urgent 2k, 196 duplicate debits) |
-| **OPay Export (CSV)** | **146 transactions** | **8 milliseconds** | **0 bytes** | Chowdeck midnight leaks, duplicate transfers flagged |
+| **OPay Export (CSV)** | **146 transactions** | **8 milliseconds** | **0 bytes** | Chowdeck double-charge (₦5,148) flagged; OWealth savings & self-transfers excluded from burn |
 | **Geegpay USD Statement (CSV)** | **12 transactions** | **2 milliseconds** | **0 bytes** | AWS, GitHub, Cursor classified as Tax Deductibles |
 | **Single Memo Shazam (`/decode-memo`)** | **1 transaction** | **0.05 milliseconds** | **0 bytes** | Cleans noise, extracts merchant, tags category |
 
@@ -34,15 +34,28 @@ Nigerian bank statements (OPay, GTBank, Kuda, Moniepoint, Access Bank, Geegpay) 
 ## 2. Zero-Disk Ephemeral RAM Architecture
 
 Azaman enforces strict bank-grade privacy compliance:
-1. **Multipart RAM Bounds**: In-memory parsing buffer is strictly restricted by `r.MaxMultipartMemory = 32MB` via [`internal/api/middleware.go`](internal/api/middleware.go).
+1. **Multipart RAM Bounds**: `http.MaxBytesReader` caps every request body at 32MB ([`internal/api/middleware.go`](internal/api/middleware.go)). Gin's `MaxMultipartMemory` is set 1MB *above* that cap ([`internal/api/router.go`](internal/api/router.go)), so multipart parts can never spill to OS temp files.
 2. **Zero Disk Writes**: No statement payload, uploaded chunk, or intermediate text ever touches the file system (`os.WriteFile`, `ioutil.TempFile`, or database).
-3. **Cryptographic Memory Scrubbing**: When the HTTP handler completes, [`internal/ephemeral/scrubber.go`](internal/ephemeral/scrubber.go) wipes byte buffers by zeroing them in memory:
+3. **Memory Scrubbing**: When the HTTP handler completes, [`internal/ephemeral/scrubber.go`](internal/ephemeral/scrubber.go) wipes byte buffers by zeroing them in memory:
    ```go
    for i := range b {
        b[i] = 0
    }
    runtime.GC()
    ```
+   Zeroing is best-effort: Go's runtime may have copied data (string conversions, GC moves) before the scrub. The guarantee is *no disk persistence*, not forensic RAM erasure.
+
+### Nigeria Data Protection Act (NDPA) 2023 Alignment
+
+| NDPA principle | How Azaman meets it |
+| :--- | :--- |
+| Data minimisation | Only the uploaded statement is processed; no account linking, no BVN/NIN requested. |
+| Storage limitation | Zero-disk design; buffers are scrubbed when the response completes. Nothing is retained after the request. |
+| Integrity & confidentiality | NUBAN account and phone numbers are masked (`0123****89`, `0803****567`) before any output or AI call. |
+| Purpose limitation | Data is used only to produce the audit returned to the uploader. |
+| Cross-border transfer | The optional Laya sidecar runs locally (127.0.0.1); only masked, noise-stripped memos (max 5 per audit) are sent to it. |
+
+> Deployers remain the data controller: they must still provide a privacy notice, a lawful basis (usually consent), and TLS in transit.
 
 ---
 
@@ -67,7 +80,7 @@ Azaman enforces strict bank-grade privacy compliance:
 │  │                 Parser & Normalizer Router                       │  │
 │  │   - Coordinate PDF Extractor (Geometry X/Y Windowing)            │  │
 │  │   - Dynamic CSV / Excel Delimiter Splitter                       │  │
-│  │   - Bank Auto-Detector (OPay, GTB, Kuda, Moniepoint, Geegpay)   │  │
+│  │   - Bank Auto-Detector (15 NG banks, letterhead-first)          │  │
 │  └──────────────────────────────────┬───────────────────────────────┘  │
 │                                     │                                  │
 │                                     ▼                                  │
@@ -82,7 +95,7 @@ Azaman enforces strict bank-grade privacy compliance:
 │  ┌────────────────────────────────────┐ ┌───────────────────────────┐  │
 │  │        Cash Leak Spotlighter       │ │    Laya AI Sidecar Client │  │
 │  │  - Urgent 2k Velocity & Errand     │ │  (System 1 Non-Auto-      │  │
-│  │  - Midnight Impulse (10PM - 4AM)   │ │   regressive Classifier)  │  │
+│  │  - Midnight Impulse (22:00-03:59)  │ │   regressive Classifier)  │  │
 │  │  - Duplicate Debit Detector (24h)  │ └─────────────┬─────────────┘  │
 │  │  - Clearinghouse Levies & EMTL     │               │ HTTP (8001)    │
 │  │  - Runway & Burn Projector         │               ▼                │
@@ -153,7 +166,9 @@ $$\text{Condition} = (\text{Debit}) \land (\text{NGN}) \land (1,000 \le \text{Am
 #### 2. Midnight Discretionary Drain
 *Source: [`internal/analyzer/midnight.go`](internal/analyzer/midnight.go)*
 $$\text{Condition} = (\text{Debit}) \land (\text{Hour} \in \{22, 23, 0, 1, 2, 3\}) \land (\text{Discretionary Category})$$
-- Filters for late-night impulse spending (fast food, rides, lounges, late night POS cashouts).
+- Window is 22:00–03:59. Filters for late-night impulse spending (fast food, rides, lounges, betting).
+- Date-only statements (no time column) parse as 00:00; those rows are treated as *time unknown*, not midnight. Known late-night merchants (Chowdeck, Bolt, lounges) are only assumed late-night when the statement has no time of day.
+- Savings deposits (OWealth auto-save etc.) are never midnight leaks.
 
 #### 3. 24-Hour Duplicate Debit Detection
 *Source: [`internal/analyzer/duplicates.go`](internal/analyzer/duplicates.go)*
@@ -163,8 +178,12 @@ $$\text{Match} \iff (\text{Merchant}_A = \text{Merchant}_B) \land (|A_{\text{amo
 
 #### 4. Runway & Burn Rate Projection
 *Source: [`internal/analyzer/runway.go`](internal/analyzer/runway.go)*
-$$\text{Daily Burn} = \frac{\sum \text{Outflows}}{\text{Audit Span in Days}}, \quad \text{Monthly Burn} = \text{Daily Burn} \times 30.41$$
-$$\text{Runway (Months)} = \frac{\text{Current Account Balance}}{\text{Monthly Burn}}$$
+$$\text{Daily Burn} = \frac{\sum \text{Real Outflows}}{\text{Audit Span in Days}}, \quad \text{Monthly Burn} = \text{Daily Burn} \times 30.44$$
+$$\text{Weighted Burn} = \frac{\sum_{k} 0.85^{k} \cdot \text{Burn}_{\text{month}-k}}{\sum_{k} 0.85^{k}} \quad (\text{complete calendar months only})$$
+$$\text{Runway (Months)} = \frac{\text{Closing Balance}}{\text{Weighted Burn}}$$
+- **Real outflows** exclude self-transfers, savings-wallet deposits and reversed debits.
+- **Inflation weighting**: the most recent month weighs 1.0, the one before 0.85, and so on, so a 12-month statement reflects current naira prices rather than last year's.
+- **Closing balance** is the balance on the newest-dated row (statements can be newest-first).
 
 ---
 
@@ -176,6 +195,28 @@ For ambiguous memos where confidence $< 0.90$:
 - **Batch Capping**: Capped at $\le 5$ items per statement audit to guarantee sub-second completion.
 - **Sidecar Caching**: An in-memory cache in Python stores classified memos, allowing repeat items to return in $0.01\text{ ms}$.
 - **Offline Fallback**: If Laya is offline, Go automatically falls back to rule-based heuristics without blocking requests.
+
+### F. Nigeria-Specific Intelligence
+*Source: [`internal/analyzer/transfers.go`](internal/analyzer/transfers.go), [`internal/analyzer/insights.go`](internal/analyzer/insights.go), [`internal/analyzer/runway.go`](internal/analyzer/runway.go)*
+
+These passes run before the leak detectors, so leak totals only count real spending.
+
+1. **Failed-Transfer Reversals**: A credit mentioning `reversal`/`refund`/`rvsl` is paired with the closest earlier debit of the same amount within 7 days. Both legs are dropped from spend, income and duplicates. Reversals slower than the **CBN 48-hour** timeline are flagged `late`. Debits marked `failed`/`pending` with no reversal are listed as **dispute candidates**.
+2. **Self-Transfers & Savings Wallets**: Transfers to the holder's own name at another bank (at least two shared name tokens, so a sibling sharing only a surname does not count), `Add Money` card top-ups, and OWealth / PiggyVest / Cowrywise / Kuda Save movements are treated as internal. They are reported as savings and removed from burn and leaks.
+3. **Urgent 2k Periodicity Filter**: Three or more payments to the same recipient with a stable amount (±10%) at a regular interval (at least 6 days, gap CV ≤ 0.35) are planned obligations, not impulse favours. They are reclassified as **Black Tax (Family Support)**, **Ajo / Thrift**, **Rent** or **Recurring Payment**.
+4. **Bank Charges & Overcharge Detector**: Fees are split into EMTL, stamp duty, SMS, USSD, VAT, cybersecurity levy (0.5%), card maintenance, account maintenance and NIP transfer fees. Potential overcharges are flagged for dispute:
+
+   | Rule | Limit |
+   | :--- | :--- |
+   | EMTL | ₦50 flat, only on receipts ≥ ₦10,000 (levies beyond the qualifying receipt count are flagged) |
+   | NIP transfer fee | ₦50 top tier + 7.5% VAT = ₦53.75 |
+   | Naira debit card maintenance | ₦50 per quarter |
+
+   USSD fees are totalled but not checked: the ₦6.98 NCC rate is per 20-second session, and one transaction can span several sessions.
+5. **Nigerian Categories**: Betting (SportyBet, Bet9ja, BetKing, 1xBet…), loan apps (Palmcredit, Okash, QuickCheck…; loan disbursements are never counted as income), Ajo/Esusu/Adashe, religious giving (tithe, offering, zakat), DSTV/GOtv/streaming, school fees/WAEC/JAMB, rent, electricity DisCos, and bill gateways (CoralPay, Remita, Quickteller). Pidgin memos such as `t fare`, `chop money`, `abeg`, `sapa` and `pikin` are recognised. Short patterns (≤ 4 chars) match whole words only, so `glo` no longer matches "global" and `mobil` no longer turns "Mobile Data" into fuel. FairMoney, Carbon and Renmoney are also banks, so only loan-specific memos from them count as loans.
+6. **Insights & Warnings**: Reports betting spend vs winnings, airtime/data share, loan debt-service ratio (a warning above 30%), black tax share and savings rate (net savings + ajo ÷ income).
+7. **Tax Estimate (Nigeria Tax Act 2025)**: Annualised real income minus tax-deductible spend and rent relief (20% of rent, capped at ₦500k), taxed with the 2026 PIT bands: 0% to ₦800k, 15% to ₦3M, 18% to ₦12M, 21% to ₦25M, 23% to ₦50M, and 25% above. This is an indicative figure only.
+8. **Business vs Personal Split**: Separates tech vendors, commercial payees (`Ventures`, `Enterprises`, `Ent`, `Ltd`…) and client income from personal flows. This gives informal traders who run their business through a personal account a simple P&L.
 
 ---
 
@@ -195,7 +236,10 @@ azaman-engine/
 │   │   ├── duplicates.go           # 24h duplicate debit detector
 │   │   ├── leaks.go                # Central cash leak aggregator
 │   │   ├── midnight.go             # 10 PM - 4 AM impulse drain detector
-│   │   ├── runway.go               # Daily burn and runway projector
+│   │   ├── insights.go             # Nigeria insights, NTA 2025 tax estimate, business split
+│   │   ├── nigeria_test.go         # Reversal, self-transfer, recurring, overcharge, tax tests
+│   │   ├── runway.go               # Weighted burn, runway, bank charges & overcharges
+│   │   ├── transfers.go            # Reversals, self/savings transfers, recurring payments
 │   │   └── urgent2k.go             # Urgent 2k micro-transfer tracker
 │   ├── api/
 │   │   ├── api_test.go             # HTTP endpoint tests
@@ -241,6 +285,8 @@ azaman-engine/
   - `statement` (File, required): Bank statement (PDF, CSV, XLSX, TSV).
   - `password` (String, optional): Password for encrypted PDFs.
   - `bank` (String, optional): Bank name override.
+  - `account_name` (String, optional): Account holder name. Auto-read from CSV/Excel headers (`Account Name`, `Account Holder`, `Customer Name`); used to spot transfers to your own accounts.
+  - `detail` (String, optional): `summary` drops every per-transaction array for a much smaller payload (low-end phones, expensive data). Also accepted as `?detail=summary`.
 
 **Sample Response**:
 ```json
@@ -281,9 +327,26 @@ azaman-engine/
     "bank_charges": {
       "total_charges": 33002.90,
       "transfer_fees": 25015.40,
-      "stamp_duty": 7880.00
+      "stamp_duty": 7880.00,
+      "emtl": 7880.00,
+      "vat_on_fees": 0,
+      "cybersecurity_levy": 0,
+      "total_overcharge": 50.00,
+      "overcharges": [
+        {"fee_type": "EMTL", "charged": 50, "allowed": 0, "excess": 50, "rule": "EMTL (₦50) applies only to receipts of ₦10,000+; more levies than qualifying receipts"}
+      ]
     }
   },
+  "reversals": {"reversed_count": 1, "reversed_amount": 20000, "late_reversals": 1, "unresolved_count": 0},
+  "internal_transfers": {"self_transfers_out": 1050, "self_transfers_in": 21000, "savings_deposits": 26868, "savings_withdrawals": 29891, "net_saved": -3023},
+  "nigeria_insights": {
+    "betting_spend": 1000, "airtime_data_spend": 4160, "debt_service_ratio_pct": 0,
+    "religious_giving": 60000, "black_tax": 0, "savings_rate_pct": -2.92,
+    "recurring_payments": [],
+    "warnings": ["Betting: ₦1,000 staked across 1 bets (net -₦1,000).", "Savings rate is -2.9%; aim for at least 10%."]
+  },
+  "tax_estimate": {"regime": "Nigeria Tax Act 2025 (PIT, effective 2026)", "annualized_income": 63159.27, "estimated_annual_tax": 0},
+  "business_split": {"business_inflow": 0, "business_outflow": 5500, "personal_outflow": 145383},
   "categories": [
     {"category": "FinTech & Investments", "amount": 8855265.07, "percentage": 53.71, "count": 1681},
     {"category": "Family & Favors", "amount": 6493771.95, "percentage": 39.39, "count": 920}
@@ -338,13 +401,13 @@ azaman-engine/
 ## 7. Getting Started
 
 ### Prerequisites
-- **Go**: Version `1.24+` installed
+- **Go**: Version `1.26+` installed
 - **Python**: Version `3.10+` installed (for Laya sidecar)
 - **Air** (Optional for live-reload): `go install github.com/air-verse/air@latest`
 
 ### Step 1: Clone and Build Engine
 ```bash
-git clone https://github.com/your-username/azaman-engine.git
+git clone <your-fork-url>/azaman-engine.git
 cd azaman-engine
 go mod tidy
 go build -o bin/server.exe ./cmd/server
@@ -352,8 +415,8 @@ go build -o bin/server.exe ./cmd/server
 
 ### Step 2: Start the Laya AI Sidecar (Optional)
 ```bash
-cd sidecar
-pip install -r requirements.txt
+pip install -r sidecar/requirements.txt
+# run from the repo root so the `sidecar.` module path resolves
 python -m uvicorn sidecar.laya_service:app --host 127.0.0.1 --port 8001
 ```
 

@@ -78,7 +78,16 @@ func HandleOpenAPISpec(c *gin.Context) {
 										},
 										"bank": gin.H{
 											"type":        "string",
-											"description": "Optional bank override (GTBank, Kuda Bank, OPay, Moniepoint, Access Bank, Geegpay USD)",
+											"description": "Optional bank override (GTBank, Kuda Bank, OPay, PalmPay, Moniepoint, Access Bank, Zenith Bank, First Bank, UBA, Wema Bank (ALAT), Fidelity Bank, Sterling Bank, FCMB, Stanbic IBTC, Geegpay USD)",
+										},
+										"account_name": gin.H{
+											"type":        "string",
+											"description": "Optional account holder name. Auto-read from CSV/Excel headers; used to detect transfers to your own accounts",
+										},
+										"detail": gin.H{
+											"type":        "string",
+											"enum":        []string{"full", "summary"},
+											"description": "'summary' drops per-transaction arrays for a much smaller response (low data / low-end phones)",
 										},
 									},
 								},

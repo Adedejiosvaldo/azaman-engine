@@ -13,10 +13,8 @@ func AnalyzeUrgent2k(txs []models.DecodedTransaction, periodDays float64) models
 		Transactions: []models.DecodedTransaction{},
 	}
 
-	familyKeywords := []string{"mum", "dad", "mama", "papa", "sister", "brother", "family", "home", "upkeep", "parents", "cousin"}
-
 	for _, tx := range txs {
-		if tx.Amount >= 0 || tx.Debit <= 0 {
+		if !tx.IsSpend() {
 			continue
 		}
 

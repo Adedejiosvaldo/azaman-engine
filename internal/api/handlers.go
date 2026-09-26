@@ -73,6 +73,7 @@ func HandleAudit(c *gin.Context) {
 	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
 	password := c.DefaultPostForm("password", "")
 	bankOverride := c.DefaultPostForm("bank", "")
+	accountHolder := strings.TrimSpace(c.DefaultPostForm("account_name", ""))
 
 	// 4. Detect bank if not provided
 	bankName := bankOverride
@@ -82,6 +83,13 @@ func HandleAudit(c *gin.Context) {
 			sampleSize = len(fileBytes)
 		}
 		bankName = parser.DetectBank(string(fileBytes[:sampleSize]))
+	}
+	if accountHolder == "" && fileExt != ".pdf" {
+		sampleSize := 4096
+		if len(fileBytes) < sampleSize {
+			sampleSize = len(fileBytes)
+		}
+		accountHolder = parser.ExtractAccountHolder(string(fileBytes[:sampleSize]))
 	}
 
 	var rawTransactions []models.RawTransaction
@@ -230,7 +238,13 @@ func HandleAudit(c *gin.Context) {
 		formatName,
 		fileSize,
 		startTime,
+		accountHolder,
 	)
+
+	// detail=summary drops per-transaction arrays (~95% smaller) for low-end phones and costly data.
+	if c.DefaultPostForm("detail", c.Query("detail")) == "summary" {
+		compactReport(&audit)
+	}
 
 	c.Header("X-Session-ID", sessionID)
 	c.Header("X-Response-Time", time.Since(startTime).String())
@@ -306,10 +320,10 @@ func HandleHealth(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":      "ok",
-		"service":     "azaman-shazam-engine",
-		"uptime":      time.Since(serverStartTime).String(),
-		"version":     "1.0.0",
+		"status":  "ok",
+		"service": "azaman-shazam-engine",
+		"uptime":  time.Since(serverStartTime).String(),
+		"version": "1.0.0",
 		"ai_decision_engine": gin.H{
 			"provider": "Laya AI System 1 Decision Model",
 			"status":   layaStatus,
@@ -323,4 +337,16 @@ func HandleHealth(c *gin.Context) {
 		},
 		"disk_free_compliance": "Ephemeral RAM Only - 0 bytes persisted",
 	})
+}
+
+// compactReport strips per-transaction arrays, keeping every KPI, leak total, and insight.
+func compactReport(r *models.AuditReport) {
+	r.Transactions = nil
+	r.CashLeaks.MidnightLeak.Transactions = nil
+	r.CashLeaks.Urgent2k.Transactions = nil
+	r.CashLeaks.BankCharges.Transactions = nil
+	r.Reversals.UnresolvedDebits = nil
+	for i := range r.CashLeaks.DuplicateDebits.Pairs {
+		r.CashLeaks.DuplicateDebits.Pairs[i].Transactions = nil
+	}
 }
