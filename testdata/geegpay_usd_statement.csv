@@ -1,0 +1,10 @@
+Geegpay Technologies - USD Wallet Statement
+Account Holder: Azaman Dev Ltd
+Currency: USD
+
+Date,Narration,Debit,Credit,Balance
+2024-01-01,Inward Wire Payout from TechClient San Francisco,,4500.00,4500.00
+2024-01-02,Card Payment: AWS Cloud Hosting Infrastructure,180.50,,4319.50
+2024-01-03,Card Payment: CURSOR AI PRO SUBSCRIPTION,20.00,,4299.50
+2024-01-04,Card Payment: VERCEL INC PRO TEAM,40.00,,4259.50
+2024-01-05,Card Payment: GITHUB INC TEAM,21.00,,4238.50
