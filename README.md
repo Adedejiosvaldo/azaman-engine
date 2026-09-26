@@ -445,6 +445,18 @@ Access the UI at:
 - Swagger API: [http://localhost:8080/swagger](http://localhost:8080/swagger)
 - Health: [http://localhost:8080/health](http://localhost:8080/health)
 
+### Docker (Engine + Laya Sidecar in One Container)
+```bash
+docker build -t azaman .                          # add --build-arg PRELOAD_LAYA=0 to skip model download
+docker run --rm -p 8080:8080 --read-only --tmpfs /tmp:size=64m --memory=3g azaman
+
+curl localhost:8080/health    # ai_decision_engine.status should be "connected"
+curl localhost:8001/health    # must FAIL: the sidecar is bound to 127.0.0.1 inside the container
+```
+- `tini` is PID 1; [`docker/entrypoint.sh`](docker/entrypoint.sh) starts both processes. If either one exits, the container exits, so your platform restarts it.
+- Laya checkpoints are baked in at build time and the runtime is offline (`HF_HUB_OFFLINE=1`), so `--read-only` works.
+- Runs as non-root user `azaman` (uid 10001), with `GIN_MODE=release`. The `HEALTHCHECK` hits `/health` on 8080.
+
 ### Step 4: Run Tests
 ```bash
 go test -v ./...
