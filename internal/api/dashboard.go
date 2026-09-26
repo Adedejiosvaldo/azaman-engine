@@ -104,6 +104,8 @@ func HandleDashboard(c *gin.Context) {
     .upload-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
     .upload-desc { color: var(--muted); font-size: 13px; }
     .form-row {
+      position: relative;
+      z-index: 2; /* sit above the full-card invisible file input so the button and password field are clickable */
       display: flex;
       gap: 12px;
       margin-top: 16px;
@@ -226,7 +228,7 @@ func HandleDashboard(c *gin.Context) {
       <div class="badges">
         <div class="badge green">🛡️ Zero-Disk RAM (32MB)</div>
         <div class="badge purple" id="laya-badge">⚡ Laya AI Ready</div>
-        <div class="badge">GTB · Kuda · OPay · Access · Geegpay</div>
+        <div class="badge">OPay · PalmPay · GTB · Kuda · Zenith · +10 banks</div>
       </div>
       <div class="links">
         <a href="/swagger" target="_blank">📖 Swagger Docs</a>
@@ -272,7 +274,7 @@ func HandleDashboard(c *gin.Context) {
 
       <div class="leaks-grid">
         <div class="leak-card midnight">
-          <div class="leak-title">🌙 Midnight Cash Leak <span>10PM - 3AM</span></div>
+          <div class="leak-title">🌙 Midnight Cash Leak <span>10PM - 4AM</span></div>
           <div class="leak-amount" id="midnight-amt" style="color: var(--purple);">₦0.00</div>
           <div class="kpi-sub" id="midnight-sub">0 transactions (Chowdeck, Lounges, late rides)</div>
         </div>
@@ -397,7 +399,7 @@ func HandleDashboard(c *gin.Context) {
 
       const leaks = report.cash_leaks;
       document.getElementById('midnight-amt').textContent = fmtNaira(leaks.midnight_leak.total_amount);
-      document.getElementById('midnight-sub').textContent = leaks.midnight_leak.count + ' late night drains (10PM - 3AM)';
+      document.getElementById('midnight-sub').textContent = leaks.midnight_leak.count + ' late night drains (10PM - 4AM)';
 
       document.getElementById('urgent-amt').textContent = fmtNaira(leaks.urgent_2k.total_amount);
       document.getElementById('urgent-sub').textContent = leaks.urgent_2k.count + ' favors (avg: ' + fmtNaira(leaks.urgent_2k.average_transfer_size) + ')';
