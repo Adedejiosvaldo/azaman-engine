@@ -3,6 +3,8 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"sync"
@@ -24,19 +26,26 @@ type LayaMemoItem struct {
 	Memo    string  `json:"memo"`
 	Amount  float64 `json:"amount"`
 	RawMemo string  `json:"raw_memo,omitempty"`
+	// Hour is the time of day (0-23), nil when the statement has no time column.
+	Hour     *int   `json:"hour,omitempty"`
+	IsCredit bool   `json:"is_credit"`
+	Currency string `json:"currency,omitempty"`
 }
 
 // LayaDecision represents the System 1 decision returned by Laya.
 type LayaDecision struct {
-	ID               string  `json:"id"`
-	Merchant         string  `json:"merchant"`
-	Category         string  `json:"category"`
-	Classification   string  `json:"classification"`
-	Confidence       float64 `json:"confidence"`
-	IsSilentLeak     bool    `json:"is_silent_leak"`
-	IsUrgent2k       bool    `json:"is_urgent_2k"`
-	IsTaxDeductible  bool    `json:"is_tax_deductible"`
+	ID              string  `json:"id"`
+	Merchant        string  `json:"merchant"`
+	Category        string  `json:"category"`
+	Classification  string  `json:"classification"`
+	Confidence      float64 `json:"confidence"`
+	IsSilentLeak    bool    `json:"is_silent_leak"`
+	IsUrgent2k      bool    `json:"is_urgent_2k"`
+	IsTaxDeductible bool    `json:"is_tax_deductible"`
 }
+
+// maxResponseBytes bounds how much of a sidecar response is read into RAM.
+const maxResponseBytes = 1 << 20
 
 type batchRequest struct {
 	Items []LayaMemoItem `json:"items"`
@@ -128,8 +137,13 @@ func (c *LayaClient) ClassifyBatch(items []LayaMemoItem) (map[string]LayaDecisio
 	}
 	defer resp.Body.Close()
 
+	// A 4xx/5xx body (e.g. FastAPI validation error) would decode into empty results and pass silently.
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("laya sidecar returned %s", resp.Status)
+	}
+
 	var bResp batchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&bResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(&bResp); err != nil {
 		return nil, err
 	}
 

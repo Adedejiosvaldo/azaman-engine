@@ -1,35 +1,59 @@
-import sys
+import hashlib
+import json
+import os
+import re
+import threading
 import time
-from typing import List, Dict, Any, Optional
+from collections import OrderedDict
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-app = FastAPI(title="Azaman Laya Decision Sidecar", version="1.0.0")
+app = FastAPI(title="Azaman Laya Decision Sidecar", version="1.1.0")
 
-# Attempt to load native Laya Router
+# ==================== CATEGORY TAXONOMY ====================
+# Shared with the Go engine (sidecar/categories.json). Laya may only answer with "assignable" categories,
+# so its output always lines up with the engine's insight, fee and business totals.
+_CATEGORY_FILE = Path(__file__).with_name("categories.json")
+with _CATEGORY_FILE.open(encoding="utf-8") as fh:
+    _TAXONOMY = json.load(fh)["categories"]
+
+ASSIGNABLE = {c["name"]: c["description"] for c in _TAXONOMY if c["assignable"]}
+DEFAULT_CATEGORY = "Personal Discretionary"
+LEAK_CATEGORIES = {"Late Night Food & Lounges", "Betting & Gaming", "Subscriptions & TV"}
+TAX_CATEGORIES = {"Tech & Cloud Infrastructure", "Workspace & Co-working"}
+URGENT_2K_MIN, URGENT_2K_MAX = 1000.0, 15000.0
+
+# ==================== LAYA ROUTER ====================
 HAS_LAYA = False
 router = None
 
-try:
-    from laya import Router
-    print("[LAYA-SIDECAR] Loading Laya Router checkpoints into memory...")
-    router = Router(preload=True)
-    HAS_LAYA = True
-    print("[LAYA-SIDECAR] Laya Router successfully preloaded!")
-except Exception as e:
-    print(f"[LAYA-SIDECAR] Laya package not loaded ({e}). Running in high-speed fallback mode.")
-    HAS_LAYA = False
+if os.getenv("LAYA_DISABLE") != "1":
+    try:
+        from laya import Router
+        print("[LAYA-SIDECAR] Loading Laya Router checkpoints into memory...")
+        router = Router(preload=True)
+        HAS_LAYA = True
+        print("[LAYA-SIDECAR] Laya Router successfully preloaded!")
+    except Exception as e:
+        print(f"[LAYA-SIDECAR] Laya package not loaded ({e}). Running in high-speed fallback mode.")
 
 
+# ==================== REQUEST / RESPONSE MODELS ====================
 class MemoItem(BaseModel):
-    id: str
-    memo: str
-    amount: float
-    raw_memo: Optional[str] = ""
+    id: str = Field(max_length=64)
+    memo: str = Field(max_length=300)
+    amount: float = Field(ge=0)
+    raw_memo: Optional[str] = Field(default="", max_length=300)
+    hour: Optional[int] = Field(default=None, ge=0, le=23)  # time of day, None if the statement has no time
+    is_credit: bool = False
+    currency: str = Field(default="NGN", max_length=3)
 
 
 class BatchRequest(BaseModel):
-    items: List[MemoItem]
+    items: List[MemoItem] = Field(max_length=50)
 
 
 class DecisionResult(BaseModel):
@@ -47,18 +71,7 @@ CATEGORY_QUESTIONS = {
     "category": {
         "type": "choice",
         "instructions": "Classify this Nigerian bank transfer or payment memo into the most appropriate category.",
-        "criteria": {
-            "Food & Dining": "restaurants, fast food, meals, eating out, bakeries",
-            "Supermarket & Groceries": "supermarkets, grocery stores, provisions, household shopping",
-            "Commute & Transit": "bus transit, taxis, fuel, petrol stations, ride hailing",
-            "POS Cashout & Agency": "POS merchants, cashout agents, business enterprise withdrawals",
-            "Tech & Hardware": "laptops, software, cloud hosting, developer tools, subscriptions",
-            "Airtime & Utilities": "mobile data, telecom airtime, electricity, power utility bills",
-            "Family & Favors": "personal transfers to individuals, allowances, upkeep, gifts",
-            "Religious & Giving": "church tithes, offerings, donations",
-            "Bank Fees & Levies": "stamp duty, EMTL, USSD fees, alert charges, transfer fees",
-            "Personal Discretionary": "general lifestyle spending, shopping, leisure"
-        }
+        "criteria": ASSIGNABLE,
     },
     "is_silent_leak": {
         "type": "noul",
@@ -75,17 +88,175 @@ CATEGORY_QUESTIONS = {
 }
 
 
+# ==================== EPHEMERAL DECISION CACHE ====================
+class DecisionCache:
+    """Bounded LRU with TTL. Keys are SHA-256 hashes, and values hold only the decision, so no memo
+    text or recipient names stay in memory after a request (NDPA storage limitation)."""
+
+    def __init__(self, max_entries: int = 10_000, ttl_seconds: float = 3600):
+        self.max_entries = max_entries
+        self.ttl = ttl_seconds
+        self._data: "OrderedDict[str, tuple[float, Dict[str, Any]]]" = OrderedDict()
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def key(item: MemoItem, text: str) -> str:
+        # Amount band, late-night window and direction change the answer, so they are part of the key.
+        band = "micro" if URGENT_2K_MIN <= item.amount <= URGENT_2K_MAX else "other"
+        late = item.hour is not None and (item.hour >= 22 or item.hour <= 3)
+        raw = f"{text.strip().lower()}|{band}|{late}|{item.is_credit}|{item.currency}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def get(self, k: str) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            entry = self._data.get(k)
+            if entry is None:
+                return None
+            stored_at, value = entry
+            if time.monotonic() - stored_at > self.ttl:
+                del self._data[k]
+                return None
+            self._data.move_to_end(k)
+            return value
+
+    def put(self, k: str, value: Dict[str, Any]) -> None:
+        with self._lock:
+            self._data[k] = (time.monotonic(), value)
+            self._data.move_to_end(k)
+            while len(self._data) > self.max_entries:
+                self._data.popitem(last=False)
+
+    def clear(self) -> int:
+        with self._lock:
+            n = len(self._data)
+            self._data.clear()
+            return n
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+
+memo_cache = DecisionCache(
+    max_entries=int(os.getenv("LAYA_CACHE_MAX", "10000")),
+    ttl_seconds=float(os.getenv("LAYA_CACHE_TTL", "3600")),
+)
+
+
+# ==================== FALLBACK RULES ====================
+# Whole-word regexes, checked in order. Mirrors the Go dictionary: "bus" must not hit "business",
+# "pos" must not hit "deposit", bank names (OPay, PalmPay, Carbon) never imply a category.
+def _rx(words: str) -> re.Pattern:
+    return re.compile(rf"\b(?:{words})\b", re.IGNORECASE)
+
+
+FALLBACK_RULES = [
+    (_rx(r"sportybet|bet9ja|betking|1xbet|betway|nairabet|merrybet|msport|betting"), "Betting & Gaming"),
+    (_rx(r"loan|okash|palmcredit|quickcheck|easemoni|lcredit"), "Loans & Debt Service"),
+    (_rx(r"ajo|esusu|osusu|adashe|thrift|contribution|cooperative"), "Ajo & Thrift"),
+    (_rx(r"church|tithe|offering|mosque|zakat|sadaqah|rccg|mfm|winners"), "Religious Giving"),
+    (_rx(r"dstv|gotv|startimes|netflix|spotify|showmax"), "Subscriptions & TV"),
+    (_rx(r"school fees?|tuition|waec|jamb|neco"), "Education"),
+    (_rx(r"rent|house rent|caution fee|agency fee"), "Rent & Housing"),
+    (_rx(r"airtime|mobile data|data bundle|recharge|electricity|nepa|phcn|prepaid meter"), "Airtime & Utilities"),
+    (_rx(r"laptop|macbook|hosting|software|server|domain"), "Tech & Cloud Infrastructure"),
+    (_rx(r"co-?working|workspace|desk rental"), "Workspace & Co-working"),
+    (_rx(r"chowdeck|glovo|lounge|club|nightlife"), "Late Night Food & Lounges"),
+    (_rx(r"bolt|uber|indrive|keke|okada|danfo|brt|t[- ]?fare|transport(?: fare)?|bus fare|fuel|petrol"), "Commute & Transit"),
+    (_rx(r"hair|barbing|barber|makeup|nails"), "Personal Care"),
+    (_rx(r"food|chop|bread|rice|soup|foodstuffs?|market|provisions?"), "Food & Dining"),
+    (_rx(r"pos|cashout|cash out|agent"), "POS Cashout & Agency"),
+    (_rx(r"allowance|upkeep|feeding|mum|mummy|dad|daddy|mama|papa|abeg|urgent|borrow|sapa|pikin|aunty|uncle"), "Family & Favors"),
+    (_rx(r"ventures?|enterprises?|stores?|ltd|limited|nig|ent|plc|global|services"), "Commercial & Business"),
+]
+
+
+def fallback_decision(item: MemoItem, text: str) -> Dict[str, Any]:
+    category, confidence = DEFAULT_CATEGORY, 0.6  # below Go's heuristics, so Go keeps its answer
+    for pattern, cat in FALLBACK_RULES:
+        if pattern.search(text):
+            category, confidence = cat, 0.9
+            break
+    return build_decision(item, text, category, confidence)
+
+
+def build_decision(item: MemoItem, text: str, category: str, confidence: float,
+                   leak_prob: Optional[float] = None, u2k_prob: Optional[float] = None,
+                   tax_prob: Optional[float] = None) -> Dict[str, Any]:
+    if category not in ASSIGNABLE:
+        category = DEFAULT_CATEGORY
+
+    late_night = item.hour is not None and (item.hour >= 22 or item.hour <= 3)
+    is_leak = category in LEAK_CATEGORIES or (late_night and category in {"Food & Dining", "Commute & Transit"})
+    is_u2k = (category == "Family & Favors" and item.currency == "NGN"
+              and URGENT_2K_MIN <= item.amount <= URGENT_2K_MAX)
+    is_tax = category in TAX_CATEGORIES
+
+    # Laya probabilities, when present, can only add flags the category allows
+    if leak_prob is not None:
+        is_leak = is_leak or leak_prob > 0.5
+    if u2k_prob is not None:
+        is_u2k = is_u2k or (u2k_prob > 0.5 and category == "Family & Favors")
+    if tax_prob is not None:
+        is_tax = is_tax or (tax_prob > 0.6 and category in TAX_CATEGORIES | {"Commercial & Business"})
+
+    if item.is_credit:
+        is_leak = is_u2k = is_tax = False
+
+    classification = "Personal Discretionary"
+    if is_tax:
+        classification = "Tax-Deductible Business Expense"
+    elif is_u2k:
+        classification = "Micro-Transfer (Urgent 2k)"
+    elif category == "Commercial & Business":
+        classification = "Operating Expense"
+
+    return {
+        "merchant": clean_title(text),
+        "category": category,
+        "classification": classification,
+        "confidence": round(confidence, 3),
+        "is_silent_leak": is_leak,
+        "is_urgent_2k": is_u2k,
+        "is_tax_deductible": is_tax,
+    }
+
+
+def laya_decision(item: MemoItem, text: str) -> Dict[str, Any]:
+    state = {"body": text, "amount": item.amount, "currency": item.currency,
+             "direction": "credit" if item.is_credit else "debit"}
+    if item.hour is not None:
+        state["hour"] = item.hour
+    pred = router.predict(state, CATEGORY_QUESTIONS)
+    answers = pred.get("answers", {})
+    return build_decision(
+        item, text,
+        category=answers.get("category", {}).get("choice", DEFAULT_CATEGORY),
+        confidence=answers.get("category", {}).get("answer_confidence", 0.9),
+        leak_prob=answers.get("is_silent_leak", {}).get("noul", 0.0),
+        u2k_prob=answers.get("is_urgent_2k", {}).get("noul", 0.0),
+        tax_prob=answers.get("is_tax_deductible", {}).get("noul", 0.0),
+    )
+
+
+# ==================== ENDPOINTS ====================
 @app.get("/health")
 def health():
     return {
         "status": "ok",
         "model": "laya-typed-decisions" if HAS_LAYA else "fallback-classifier",
         "engine": "Laya AI System 1 Decision Model",
-        "is_native_laya": HAS_LAYA
+        "is_native_laya": HAS_LAYA,
+        "version": app.version,
+        "categories": len(ASSIGNABLE),
+        "cache_entries": len(memo_cache),
+        "cache_max": memo_cache.max_entries,
+        "cache_ttl_seconds": memo_cache.ttl,
     }
 
 
-memo_cache: Dict[str, Dict[str, Any]] = {}
+@app.delete("/cache")
+def clear_cache():
+    return {"cleared": memo_cache.clear()}
 
 
 @app.post("/api/v1/laya/classify-batch")
@@ -94,113 +265,25 @@ def classify_batch(req: BatchRequest) -> Dict[str, Any]:
     results: List[DecisionResult] = []
 
     for item in req.items:
-        text = item.memo
-        if not text and item.raw_memo:
-            text = item.raw_memo
+        text = item.memo or item.raw_memo or ""
+        key = DecisionCache.key(item, text)
 
-        cache_key = text.strip().lower()
-        if cache_key in memo_cache:
-            cached = memo_cache[cache_key]
-            results.append(DecisionResult(
-                id=item.id,
-                merchant=cached["merchant"],
-                category=cached["category"],
-                classification=cached["classification"],
-                confidence=cached["confidence"],
-                is_silent_leak=cached["is_silent_leak"],
-                is_urgent_2k=cached["is_urgent_2k"],
-                is_tax_deductible=cached["is_tax_deductible"]
-            ))
-            continue
-
-        if HAS_LAYA and router is not None:
-            # Predict using Laya non-autoregressive decision pass
-            state = {"body": text, "amount": item.amount}
-            pred = router.predict(state, CATEGORY_QUESTIONS)
-            answers = pred.get("answers", {})
-
-            cat_choice = answers.get("category", {}).get("choice", "Personal Discretionary")
-            cat_conf = answers.get("category", {}).get("answer_confidence", 0.90)
-
-            is_leak_prob = answers.get("is_silent_leak", {}).get("noul", 0.0)
-            is_u2k_prob = answers.get("is_urgent_2k", {}).get("noul", 0.0)
-            is_tax_prob = answers.get("is_tax_deductible", {}).get("noul", 0.0)
-
-            classification = "Personal Discretionary"
-            if is_tax_prob > 0.6:
-                classification = "Tax-Deductible Business Expense"
-            elif is_u2k_prob > 0.6:
-                classification = "Micro-Transfer (Urgent 2k)"
-
-            m_title = clean_title(text)
-            dec = DecisionResult(
-                id=item.id,
-                merchant=m_title,
-                category=cat_choice,
-                classification=classification,
-                confidence=round(cat_conf, 3),
-                is_silent_leak=is_leak_prob > 0.5,
-                is_urgent_2k=is_u2k_prob > 0.5,
-                is_tax_deductible=is_tax_prob > 0.5
-            )
-            memo_cache[cache_key] = {
-                "merchant": m_title,
-                "category": cat_choice,
-                "classification": classification,
-                "confidence": round(cat_conf, 3),
-                "is_silent_leak": is_leak_prob > 0.5,
-                "is_urgent_2k": is_u2k_prob > 0.5,
-                "is_tax_deductible": is_tax_prob > 0.5
-            }
-            results.append(dec)
+        decision = memo_cache.get(key)
+        if decision is None:
+            if HAS_LAYA and router is not None:
+                try:
+                    decision = laya_decision(item, text)
+                except Exception as e:  # never fail the batch because one prediction broke
+                    print(f"[LAYA-SIDECAR] predict failed, using fallback: {e}")
+                    decision = fallback_decision(item, text)
+            else:
+                decision = fallback_decision(item, text)
+            # Merchant names are per-memo text, so they are not cached
+            memo_cache.put(key, {k: v for k, v in decision.items() if k != "merchant"})
         else:
-            # High-speed semantic heuristic fallback
-            lower = text.lower()
-            cat = "Personal Discretionary"
-            classification = "Personal Discretionary"
-            is_tax = False
-            is_leak = False
-            is_u2k = False
-            conf = 0.88
+            decision = {**decision, "merchant": clean_title(text)}
 
-            if "laptop" in lower or "macbook" in lower or "hardware" in lower or "tech" in lower:
-                cat = "Tech & Hardware"
-                classification = "Tax-Deductible Business Expense"
-                is_tax = True
-                conf = 0.95
-            elif "transport" in lower or "transit" in lower or "bus" in lower:
-                cat = "Commute & Transit"
-                classification = "Tax-Deductible Business Expense"
-                is_tax = True
-                conf = 0.93
-            elif "enterprise" in lower or "monie point" in lower or "pos" in lower:
-                cat = "POS Cashout & Agency"
-                conf = 0.90
-            elif "food" in lower or "eat" in lower or "bread" in lower or "corn" in lower:
-                cat = "Food & Dining"
-                is_leak = True
-                conf = 0.92
-            elif "allowance" in lower or "feeding" in lower or "upkeep" in lower:
-                cat = "Family & Favors"
-                classification = "Micro-Transfer (Urgent 2k)"
-                is_u2k = True
-                conf = 0.94
-
-            if item.amount <= 15000 and ("transfer" in lower or "opay" in lower or "palmpay" in lower):
-                if cat == "Personal Discretionary" or cat == "Family & Favors":
-                    is_u2k = True
-                    classification = "Micro-Transfer (Urgent 2k)"
-
-            results.append(DecisionResult(
-                id=item.id,
-                merchant=clean_title(text),
-                category=cat,
-                classification=classification,
-                confidence=conf,
-                is_silent_leak=is_leak,
-                is_urgent_2k=is_u2k,
-                is_tax_deductible=is_tax
-            ))
+        results.append(DecisionResult(id=item.id, **decision))
 
     elapsed_ms = (time.time() - start_time) * 1000
     return {

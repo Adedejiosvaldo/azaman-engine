@@ -156,13 +156,16 @@ func HandleAudit(c *gin.Context) {
 			if cleanKey == "" {
 				cleanKey = strings.TrimSpace(strings.ToLower(tx.RawDescription))
 			}
-			if tx.Confidence < 0.90 && tx.Amount < 0 && !seenMemos[cleanKey] {
+			if tx.Confidence < 0.90 && tx.Amount < 0 && layaEligible(tx) && !seenMemos[cleanKey] {
 				seenMemos[cleanKey] = true
 				ambiguousItems = append(ambiguousItems, ai.LayaMemoItem{
-					ID:      tx.ID,
-					Memo:    tx.CleanMemo,
-					Amount:  math.Abs(tx.Amount),
-					RawMemo: tx.RawDescription,
+					ID:       tx.ID,
+					Memo:     tx.CleanMemo,
+					Amount:   math.Abs(tx.Amount),
+					RawMemo:  tx.RawDescription,
+					Hour:     knownHour(tx),
+					IsCredit: tx.Credit > 0,
+					Currency: tx.Currency,
 				})
 				// Cap batch to 5 items to guarantee sub-second responses
 				if len(ambiguousItems) >= 5 {
@@ -194,7 +197,9 @@ func HandleAudit(c *gin.Context) {
 					if !ok {
 						dec, ok = memoDecisions[key]
 					}
-					if ok {
+					// Only override when Laya is more confident than the rules, and never for rows
+					// whose type is already certain (fees, savings, loans).
+					if ok && layaEligible(*tx) && dec.Confidence > tx.Confidence {
 						if dec.Category != "" {
 							tx.Category = dec.Category
 						}
@@ -349,4 +354,19 @@ func compactReport(r *models.AuditReport) {
 	for i := range r.CashLeaks.DuplicateDebits.Pairs {
 		r.CashLeaks.DuplicateDebits.Pairs[i].Transactions = nil
 	}
+}
+
+// layaEligible reports whether a transaction may be sent to, or reclassified by, the Laya sidecar.
+func layaEligible(tx models.DecodedTransaction) bool {
+	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan
+}
+
+// knownHour returns the transaction's hour of day, or nil for date-only rows (parsed as 00:00:00).
+func knownHour(tx models.DecodedTransaction) *int {
+	t := tx.ParsedDate
+	if t.IsZero() || (t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0) {
+		return nil
+	}
+	h := t.Hour()
+	return &h
 }

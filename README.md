@@ -193,8 +193,12 @@ $$\text{Runway (Months)} = \frac{\text{Closing Balance}}{\text{Weighted Burn}}$$
 For ambiguous memos where confidence $< 0.90$:
 - **Deduplication**: Memos are deduplicated by clean text before querying Laya.
 - **Batch Capping**: Capped at $\le 5$ items per statement audit to guarantee sub-second completion.
-- **Sidecar Caching**: An in-memory cache in Python stores classified memos, allowing repeat items to return in $0.01\text{ ms}$.
-- **Offline Fallback**: If Laya is offline, Go automatically falls back to rule-based heuristics without blocking requests.
+- **Shared Taxonomy**: [`sidecar/categories.json`](sidecar/categories.json) is the single category list for both sides. Laya may only answer with `assignable` categories, and the Go test `TestCategoriesMatchSidecar` fails if the engine uses a category missing from the file.
+- **Guarded Overrides**: Fees, savings and loan rows are never sent to Laya. A Laya answer only replaces the rule-based one when its confidence is higher. Go also sends the hour of day (when known), direction and currency.
+- **Ephemeral Sidecar Cache**: A bounded LRU (10k entries, 1h TTL; `LAYA_CACHE_MAX`, `LAYA_CACHE_TTL`). Keys are SHA-256 hashes and values hold only the decision, so no memo text or names are retained. `DELETE /cache` empties it, and `/health` reports its size.
+- **Input Limits**: At most 50 items per batch and 300 characters per memo (HTTP 422 otherwise). The Go client rejects non-200 responses and reads at most 1MB.
+- **Offline Fallback**: If Laya is offline, Go falls back to rule-based heuristics without blocking requests. If the `laya` package is missing, the sidecar uses whole-word fallback rules that mirror the Go dictionary (`LAYA_DISABLE=1` forces this mode).
+- **Tests**: `python -m unittest sidecar.test_laya_service -v` (run from the repo root).
 
 ### F. Nigeria-Specific Intelligence
 *Source: [`internal/analyzer/transfers.go`](internal/analyzer/transfers.go), [`internal/analyzer/insights.go`](internal/analyzer/insights.go), [`internal/analyzer/runway.go`](internal/analyzer/runway.go)*
@@ -265,7 +269,9 @@ azaman-engine/
 │       ├── matcher.go              # Shazam decoder & P2P disambiguator
 │       └── shazam_test.go          # Shazam decoder unit tests
 ├── sidecar/
-│   ├── laya_service.py             # FastAPI server with Laya router & memo cache
+│   ├── categories.json             # Shared category taxonomy (Go + sidecar)
+│   ├── laya_service.py             # FastAPI server with Laya router & bounded hashed cache
+│   ├── test_laya_service.py        # Sidecar unit tests (unittest)
 │   └── requirements.txt            # Python dependencies (laya, fastapi, uvicorn)
 ├── testdata/                       # Sample test statements (OPay, GTB, Kuda, Geegpay)
 ├── .air.toml                       # Live-reload configuration
