@@ -62,11 +62,11 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	var sampleText strings.Builder
 	var nullPages, rowPages, plainPages, contentPages int
 	hintBank := bankName
-	var opayRows int
+	var opayRows, tableRows int
 	// Diagnostic summary: counts and bank names only, never statement text.
 	defer func() {
-		log.Printf("[PDF-DIAG] pages=%d null=%d byRow=%d content=%d plain=%d lines=%d hint=%q detected=%q opayRows=%d finalRows=%d err=%v",
-			numPages, nullPages, rowPages, contentPages, plainPages, len(allLines), hintBank, detectedBank, opayRows, len(txs), err)
+		log.Printf("[PDF-DIAG] pages=%d null=%d byRow=%d content=%d plain=%d lines=%d hint=%q detected=%q opayRows=%d tableRows=%d finalRows=%d err=%v",
+			numPages, nullPages, rowPages, contentPages, plainPages, len(allLines), hintBank, detectedBank, opayRows, tableRows, len(txs), err)
 		if len(txs) == 0 {
 			for i := 0; i < len(allLines) && i < 25; i++ {
 				log.Printf("[PDF-DIAG] line %02d shape: %s", i, lineShape(allLines[i]))
@@ -166,6 +166,25 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 		if len(opayTxs) > 0 {
 			return opayTxs, detectedBank, nil
 		}
+	}
+
+	// Column-aware table parser (header-anchored, balance-reconciled) for other banks
+	var pageRunList [][]pdf.Text
+	for p := 1; p <= numPages; p++ {
+		page := pdfReader.Page(p)
+		if page.V.IsNull() {
+			continue
+		}
+		runs, rErr := pageRuns(page)
+		if rErr != nil {
+			log.Printf("[PDF-DIAG] page %d: %v", p, rErr)
+			continue
+		}
+		pageRunList = append(pageRunList, runs)
+	}
+	if tableTxs := parseTablePDF(pageRunList, detectedBank, defaultCurrency); len(tableTxs) > 0 {
+		tableRows = len(tableTxs)
+		return tableTxs, detectedBank, nil
 	}
 
 	transactions := parseLinesToTransactions(allLines, detectedBank, defaultCurrency)

@@ -110,3 +110,20 @@ func DetectBankFromFilename(name string) string {
 	}
 	return ""
 }
+
+var (
+	gtbHolderRe  = regexp.MustCompile(`(?i)^AC_(.+?)_[A-Z]+ \d{4}_`)
+	opayHolderRe = regexp.MustCompile(`^([A-Za-z][A-Za-z .'-]+?)_\d{10}_\d{8,}`)
+)
+
+// ExtractHolderFromFilename reads the account holder's name from bank e-statement filenames:
+// GTBank "AC_<SURNAME FIRST MIDDLE>_<MONTH YEAR>_..._FullStmt.pdf" and OPay "<NAME>_<account>_<timestamp>.pdf".
+func ExtractHolderFromFilename(name string) string {
+	name = strings.TrimSpace(name)
+	for _, re := range []*regexp.Regexp{gtbHolderRe, opayHolderRe} {
+		if m := re.FindStringSubmatch(name); m != nil {
+			return strings.Join(strings.Fields(m[1]), " ")
+		}
+	}
+	return ""
+}

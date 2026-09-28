@@ -73,8 +73,9 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		decoded.Flags.IsBankFee = rule.IsFee
 		decoded.Flags.IsSavings = rule.IsSavings
 		decoded.Flags.IsLoan = rule.IsLoan
+		decoded.Flags.IsSelfTransfer = rule.IsSelfTransfer
 		// Loan disbursements and savings withdrawals are cash in, but not income.
-		decoded.Flags.IsIncome = rule.IsIncome || (isCredit && !rule.IsLoan && !rule.IsSavings)
+		decoded.Flags.IsIncome = rule.IsIncome || (isCredit && !rule.IsLoan && !rule.IsSavings && !rule.IsSelfTransfer)
 		decoded.Flags.IsTaxDeductible = rule.IsTechVendor
 		decoded.Flags.IsBusiness = rule.IsTechVendor || (rule.IsIncome && isCredit)
 		if rule.IsLoan && isCredit {
@@ -113,7 +114,7 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 	}
 
 	// 4. Urgent 2k detection: Micro-transfers between ₦1,000 and ₦15,000 to individuals/favors
-	isNonFavor := decoded.Flags.IsSavings || decoded.Flags.IsLoan || decoded.Flags.IsBankFee
+	isNonFavor := decoded.Flags.IsSavings || decoded.Flags.IsLoan || decoded.Flags.IsBankFee || decoded.Flags.IsSelfTransfer
 	if !isCredit && !isNonFavor && (currency == "NGN" || currency == "") && absAmount >= 1000 && absAmount <= 15000 {
 		lowerDesc := strings.ToLower(raw.Description)
 		lowerClean := strings.ToLower(cleaned)

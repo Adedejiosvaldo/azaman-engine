@@ -14,6 +14,7 @@ type MerchantRule struct {
 	IsIncome       bool     // Salary, retainers, payouts
 	IsSavings      bool     // Own savings/investment wallet (internal movement, not spend)
 	IsLoan         bool     // Loan app (credit = disbursement, debit = repayment)
+	IsSelfTransfer bool     // Money moving between the holder's own accounts (not spend or income)
 	Confidence     float64  // Base confidence score
 }
 
@@ -308,9 +309,29 @@ var MerchantRegistry = []MerchantRule{
 		Confidence:     0.95,
 	},
 
+	// ==================== OWN-ACCOUNT MOVEMENTS ====================
+	// Bank card used to fund the holder's own fintech wallet ("Add Money" by card). On the bank
+	// statement it reads "POSWEB ... OPAY CHARGE LANG ..." and must not be mistaken for a fee.
+	{
+		Patterns:       []string{"opay charge", "palmpay charge", "kuda charge", "moniepoint charge", "paga charge", "chipper charge", "wallet funding", "fund wallet"},
+		Merchant:       "Wallet Top-up (Own Account)",
+		Category:       "Internal Transfers",
+		Classification: "Self Transfer",
+		IsSelfTransfer: true,
+		Confidence:     0.97,
+	},
+	{
+		Patterns:       []string{"gt inv. fund", "gt inv fund", "money market fund", "mutual fund", "unit trust", "fixed income fund", "stanbic ibtc asset", "arm investment", "meristem"},
+		Merchant:       "Investment Fund",
+		Category:       "FinTech & Investments",
+		Classification: "Savings & Investment",
+		IsSavings:      true,
+		Confidence:     0.95,
+	},
+
 	// ==================== FINTECH & SAVINGS ====================
 	{
-		Patterns:       []string{"piggyvest", "piggy points"},
+		Patterns:       []string{"piggyvest", "piggytech", "piggy points"},
 		Merchant:       "Piggyvest Savings",
 		Category:       "FinTech & Investments",
 		Classification: "Savings & Investment",
@@ -394,14 +415,14 @@ var MerchantRegistry = []MerchantRule{
 		Confidence:     0.96,
 	},
 	{
-		Patterns:       []string{"dstv", "gotv", "startimes", "multichoice", "showmax", "netflix", "spotify", "apple music", "youtube premium", "boomplay"},
+		Patterns:       []string{"google play", "google playst", "apple.com/bill", "itunes", "dstv", "gotv", "startimes", "multichoice", "showmax", "netflix", "spotify", "apple music", "youtube premium", "boomplay"},
 		Merchant:       "TV & Streaming Subscription",
 		Category:       "Subscriptions & TV",
 		Classification: "Personal Discretionary",
 		Confidence:     0.97,
 	},
 	{
-		Patterns:       []string{"school fees", "school fee", "tuition", "waec", "jamb", "neco", "acceptance fee"},
+		Patterns:       []string{"school fees", "school fee", "tuition", "waec", "jamb", "neco", "acceptance fee", "pearson vue", "vue testing", "exam fee", "ielts", "toefl", "prometric"},
 		Merchant:       "School Fees & Exams",
 		Category:       "Education",
 		Classification: "Essential Living",
@@ -482,6 +503,14 @@ var MerchantRegistry = []MerchantRule{
 	},
 
 	// ==================== INCOME & RETAINERS ====================
+	{
+		Patterns:       []string{"dividend", "div payment", "interest payment", "coupon payment"},
+		Merchant:       "Dividend / Investment Income",
+		Category:       "Income & Retainers",
+		Classification: "Investment Income",
+		IsIncome:       true,
+		Confidence:     0.95,
+	},
 	{
 		Patterns:       []string{"geegpay", "geegpay africa"},
 		Merchant:       "Geegpay USD Settlement",

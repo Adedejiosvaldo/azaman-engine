@@ -64,3 +64,17 @@ func TestDetectBankFromFilename(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractHolderFromFilename(t *testing.T) {
+	cases := map[string]string{
+		"AC_BALOGUN  CHINEDU OLUMIDE_AUGUST 2026_432R005818528_FullStmt.pdf": "BALOGUN CHINEDU OLUMIDE",
+		"CHINEDU OLUMIDE BALOGUN_7241845192_20260925221611.pdf":              "CHINEDU OLUMIDE BALOGUN",
+		"CHINEDU OLUMIDE BALOGUN_7241845192_20260925221611 (1).pdf":          "CHINEDU OLUMIDE BALOGUN",
+		"statement.pdf": "",
+	}
+	for name, want := range cases {
+		if got := ExtractHolderFromFilename(name); got != want {
+			t.Errorf("%q: want %q, got %q", name, want, got)
+		}
+	}
+}

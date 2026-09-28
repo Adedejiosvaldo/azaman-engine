@@ -89,3 +89,22 @@ func TestBusinessTransferIsNotUrgent2k(t *testing.T) {
 		t.Errorf("payment to a company must not be an Urgent 2k favor")
 	}
 }
+
+func TestCardFundingOwnWalletIsSelfTransferNotFee(t *testing.T) {
+	d := MatchAndDecode(models.RawTransaction{
+		Description: "POSWEB PURCHASE TRANSACTION WEB PUR 3PG00012 OPAY CHARGE LANG 553561 GIPS MPWBDB 3PG00012 539983*********9983",
+		Debit:       900,
+	})
+	if d.Flags.IsBankFee || !d.Flags.IsSelfTransfer || d.Category != "Internal Transfers" {
+		t.Errorf("card top-up of own OPay wallet must be a self-transfer, got %q fee=%v self=%v",
+			d.Category, d.Flags.IsBankFee, d.Flags.IsSelfTransfer)
+	}
+	if d.IsSpend() {
+		t.Errorf("self-transfer must not count as spend")
+	}
+
+	fund := MatchAndDecode(models.RawTransaction{Description: "FROM OKAFOR CHIOMA TO GT INV. FUND 724/STL TRUSTEES", Debit: 100000})
+	if !fund.Flags.IsSavings {
+		t.Errorf("GT investment fund subscription should be savings, got %q", fund.Category)
+	}
+}

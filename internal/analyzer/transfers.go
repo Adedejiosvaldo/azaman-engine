@@ -41,7 +41,8 @@ func DetectSelfTransfers(txs []models.DecodedTransaction, accountHolder string) 
 		}
 		lower := strings.ToLower(tx.RawDescription + " " + tx.CleanMemo)
 		if !tx.Flags.IsSavings {
-			if containsAny(lower, selfTransferKeywords) || isSameName(holderTokens, counterparty(tx.RawDescription)) {
+			if containsAny(lower, selfTransferKeywords) || isSameName(holderTokens, counterparty(tx.RawDescription)) ||
+				mentionsHolderAsCounterparty(holderTokens, tx.RawDescription) {
 				tx.Flags.IsSelfTransfer = true
 			}
 		}
@@ -432,4 +433,57 @@ func titleWords(s string) string {
 		words[i] = strings.ToUpper(w[:1]) + w[1:]
 	}
 	return strings.Join(words, " ")
+}
+
+// holderMentionRe finds "TRANSFER TO/FROM <anything> - NAME" and "FROM NAME-BANK-NAME" style tails
+// used by GTBank ("NIP TRANSFER TO OPAY - JOSEPH ADEDEJI ADEWUNMI").
+var (
+	holderMentionRe = regexp.MustCompile(`(?i)\b(?:to|from)\b[:\s]+([A-Za-z][A-Za-z .,'/-]{2,80})`)
+	segmentSplitRe  = regexp.MustCompile(`\s*[-/]\s*`)
+)
+
+// mentionsHolderAsCounterparty reports whether the holder's full name appears as the other party
+// of a transfer, checking every " - " / "-" separated segment after "to"/"from".
+func mentionsHolderAsCounterparty(holder []string, desc string) bool {
+	if len(holder) < 2 {
+		return false
+	}
+	for _, m := range holderMentionRe.FindAllStringSubmatch(desc, -1) {
+		for _, seg := range segmentSplitRe.Split(m[1], -1) {
+			if isSameName(holder, seg) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// vatRate is Nigeria's VAT on bank fees.
+const vatRate = 0.075
+
+// DetectFeeVAT labels unidentified tiny debits that equal 7.5% VAT on the fee just before them
+// (GTBank shows "VAT on NIP commission" as a separate row whose remarks are often just "GTW").
+func DetectFeeVAT(txs []models.DecodedTransaction) {
+	for i := 1; i < len(txs); i++ {
+		prev, tx := txs[i-1], &txs[i]
+		if !prev.Flags.IsBankFee || tx.Flags.IsBankFee || tx.Debit <= 0 || prev.Debit <= 0 {
+			continue
+		}
+		if tx.Confidence >= 0.9 || prev.Date != tx.Date && !sameDay(prev, *tx) {
+			continue
+		}
+		if math.Abs(tx.Debit-round2(prev.Debit*vatRate)) <= 0.01 {
+			tx.Merchant = "VAT on Bank Charge (7.5%)"
+			tx.Category = "Bank Fees & Charges"
+			tx.Classification = "Bank Charge"
+			tx.Flags.IsBankFee = true
+			tx.Flags.IsUrgent2k = false
+			tx.Flags.IsMidnightLeak = false
+			tx.Confidence = 0.95
+		}
+	}
+}
+
+func sameDay(a, b models.DecodedTransaction) bool {
+	return !a.ParsedDate.IsZero() && a.ParsedDate.Format("2006-01-02") == b.ParsedDate.Format("2006-01-02")
 }

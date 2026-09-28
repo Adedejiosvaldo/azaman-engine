@@ -15,10 +15,19 @@ import (
 // statement generators (GTBank, iText, Jasper) use to move between lines, so every line of a page
 // lands at the same y. pdf.Page.Content handles those but panics on fonts without width tables.
 // This interpreter tracks the text and graphics matrices itself and never needs glyph widths.
-func contentRowLines(page pdf.Page) (lines []string, err error) {
+func contentRowLines(page pdf.Page) ([]string, error) {
+	runs, err := pageRuns(page)
+	if err != nil {
+		return nil, err
+	}
+	return groupRows(runs), nil
+}
+
+// pageRuns returns the page's text runs (one per Tj/TJ string) at their real page positions.
+func pageRuns(page pdf.Page) (glyphs []pdf.Text, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			lines, err = nil, fmt.Errorf("content interpreter: %v", r)
+			glyphs, err = nil, fmt.Errorf("content interpreter: %v", r)
 		}
 	}()
 
@@ -46,7 +55,6 @@ func contentRowLines(page pdf.Page) (lines []string, err error) {
 	var leading, fontSize float64
 	var enc pdf.TextEncoding
 
-	var glyphs []pdf.Text
 	show := func(raw string) {
 		if enc == nil || raw == "" {
 			return
@@ -143,7 +151,7 @@ func contentRowLines(page pdf.Page) (lines []string, err error) {
 		}
 	})
 
-	return groupRows(glyphs), nil
+	return glyphs, nil
 }
 
 // mul multiplies two PDF affine matrices [a b c d e f] (a·b in PDF notation).
@@ -159,7 +167,8 @@ func mul(a, b [6]float64) [6]float64 {
 }
 
 // groupRows clusters glyph runs into lines: top-to-bottom by y (within a tolerance), left-to-right by x.
-func groupRows(glyphs []pdf.Text) []string {
+func groupRows(in []pdf.Text) []string {
+	glyphs := append([]pdf.Text(nil), in...)
 	sort.SliceStable(glyphs, func(i, j int) bool { return glyphs[i].Y > glyphs[j].Y })
 
 	var lines []string

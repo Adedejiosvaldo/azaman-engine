@@ -195,3 +195,37 @@ func TestApplyContactLabels(t *testing.T) {
 		t.Errorf("unlabelled contact must be untouched")
 	}
 }
+
+func TestGTBankTransferToOwnOPayIsSelfTransfer(t *testing.T) {
+	txs := []models.DecodedTransaction{
+		debit("000013260808192154000007310610 NIP TRANSFER TO OPAY - CHINEDU OLUMIDE BALOGUN", 102000, t0),
+		credit("TRANSFER BETWEEN CUSTOMERS 1000042608-TRANSFER FROM CHINEDU OLUMIDE BALOGUN-OPAY-CHINEDU", 30000, t0),
+		debit("NIP TRANSFER TO OPAY - FAVOUR IFEOLUWA BALOGUN", 5000, t0), // sibling
+	}
+	// GTBank filename order: surname first
+	DetectSelfTransfers(txs, "BALOGUN CHINEDU OLUMIDE")
+	if !txs[0].Flags.IsSelfTransfer || !txs[1].Flags.IsSelfTransfer {
+		t.Errorf("transfers to/from own OPay should be self-transfers: %v %v", txs[0].Flags.IsSelfTransfer, txs[1].Flags.IsSelfTransfer)
+	}
+	if txs[2].Flags.IsSelfTransfer {
+		t.Errorf("sibling sharing a surname must not be a self-transfer")
+	}
+}
+
+func TestDetectFeeVAT(t *testing.T) {
+	fee := debit("Commission on NIP Transfer CHARGES", 50, t0)
+	fee.Flags.IsBankFee, fee.Confidence = true, 0.99
+	vat := debit("GTW", 3.75, t0)
+	vat.Confidence = 0.7
+	other := debit("GTW", 3.75, t0.AddDate(0, 0, 3)) // not after a fee
+	other.Confidence = 0.7
+	txs := []models.DecodedTransaction{fee, vat, other}
+
+	DetectFeeVAT(txs)
+	if !txs[1].Flags.IsBankFee || txs[1].Category != "Bank Fees & Charges" {
+		t.Errorf("₦3.75 after a ₦50 fee should be VAT, got %q", txs[1].Category)
+	}
+	if txs[2].Flags.IsBankFee {
+		t.Errorf("a small debit not following a fee must be left alone")
+	}
+}

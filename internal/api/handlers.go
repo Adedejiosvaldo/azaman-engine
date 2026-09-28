@@ -87,6 +87,9 @@ func HandleAudit(c *gin.Context) {
 		}
 		bankName = parser.DetectBank(string(fileBytes[:sampleSize]))
 	}
+	if accountHolder == "" {
+		accountHolder = parser.ExtractHolderFromFilename(fileHeader.Filename)
+	}
 	if accountHolder == "" && fileExt != ".pdf" {
 		sampleSize := 4096
 		if len(fileBytes) < sampleSize {
@@ -218,7 +221,9 @@ func HandleAudit(c *gin.Context) {
 						if dec.Confidence > tx.Confidence {
 							tx.Confidence = dec.Confidence
 						}
-						if dec.IsSilentLeak {
+						// Laya's "silent leak" is about discretionary spend, not time of day: only
+						// count it as a midnight leak when the row's time is known to be late.
+						if h := knownHour(*tx); dec.IsSilentLeak && h != nil && (*h >= 22 || *h <= 3) {
 							tx.Flags.IsMidnightLeak = true
 						}
 						if dec.IsUrgent2k {
@@ -364,7 +369,7 @@ func compactReport(r *models.AuditReport) {
 
 // layaEligible reports whether a transaction may be sent to, or reclassified by, the Laya sidecar.
 func layaEligible(tx models.DecodedTransaction) bool {
-	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan
+	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan && !tx.Flags.IsSelfTransfer
 }
 
 // knownHour returns the transaction's hour of day, or nil for date-only rows (parsed as 00:00:00).

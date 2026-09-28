@@ -22,6 +22,7 @@ func GenerateAudit(
 	// debits first, then self/savings transfers drop out, then recurring payments leave Urgent 2k.
 	txs := make([]models.DecodedTransaction, len(rawTxs))
 	copy(txs, rawTxs)
+	DetectFeeVAT(txs)
 	reversalsReport := DetectReversals(txs)
 	internalReport := DetectSelfTransfers(txs, accountHolder)
 	recurring := DetectRecurring(txs)
