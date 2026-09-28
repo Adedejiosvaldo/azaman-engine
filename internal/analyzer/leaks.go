@@ -25,6 +25,7 @@ func GenerateAudit(
 	DetectFeeVAT(txs)
 	reversalsReport := DetectReversals(txs)
 	internalReport := DetectSelfTransfers(txs, accountHolder)
+	peopleReview := ScorePeople(txs, accountHolder)
 	recurring := DetectRecurring(txs)
 
 	// 1. Detect duplicates and get enriched transactions with duplicate flags
@@ -122,6 +123,7 @@ func GenerateAudit(
 		Insights:     insights,
 		Tax:          taxEstimate,
 		Business:     businessSplit,
+		PeopleReview: peopleReview,
 		Transactions: enrichedTxs,
 		BankDetected: bankName,
 		AuditMeta:    meta,

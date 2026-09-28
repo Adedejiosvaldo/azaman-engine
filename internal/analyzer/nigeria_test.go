@@ -229,3 +229,56 @@ func TestDetectFeeVAT(t *testing.T) {
 		t.Errorf("a small debit not following a fee must be left alone")
 	}
 }
+
+func p2p(name, bank string, amt float64, at time.Time, isCredit bool) models.DecodedTransaction {
+	desc := "Transfer to " + name + " | " + bank + " | 1234567890"
+	tx := debit(desc, amt, at)
+	if isCredit {
+		tx = credit("Transfer from "+name+" | "+bank+" | 1234567890", amt, at)
+	}
+	tx.Counterparty, tx.DecisionBasis, tx.Category, tx.Confidence = name, "name", "Family & Favors", 0.88
+	return tx
+}
+
+func TestScorePeople(t *testing.T) {
+	txs := []models.DecodedTransaction{
+		// Sibling: shares surname, round amounts, sends money back -> family
+		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 5000, t0, false),
+		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 2000, t0.AddDate(0, 0, 9), false),
+		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 1000, t0.AddDate(0, 0, 12), true),
+		// Trader on OPay (not Moniepoint): odd amounts, one-way -> vendor
+		p2p("NGOZI AMAKA OBI", "OPay", 1050, t0, false),
+		p2p("NGOZI AMAKA OBI", "OPay", 3810, t0.AddDate(0, 0, 4), false),
+		p2p("NGOZI AMAKA OBI", "OPay", 2350, t0.AddDate(0, 0, 8), false),
+		// One round transfer, nothing else -> unsure, goes to review
+		p2p("SAMUEL DAVID EKPO", "OPay", 2000, t0, false),
+	}
+	review := ScorePeople(txs, "CHINEDU OLUMIDE BALOGUN")
+
+	if txs[0].Category != "Family & Favors" || txs[0].DecisionBasis != "person" {
+		t.Errorf("sibling should be family by person signals: %q / %q", txs[0].Category, txs[0].DecisionBasis)
+	}
+	if txs[3].Category != "Market & Small Vendors" || txs[3].Flags.IsUrgent2k {
+		t.Errorf("odd-amount one-way payee should be a vendor: %q", txs[3].Category)
+	}
+	found := false
+	for _, r := range review {
+		if r.Name == "Samuel David Ekpo" && r.Guess == "unsure" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("weak-signal person should be sent for review, got %+v", review)
+	}
+}
+
+func TestPaymentLabelOverridesPerson(t *testing.T) {
+	tx := p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 4500, t0, false)
+	tx.Date = "03-Aug-2026"
+	txs := []models.DecodedTransaction{tx}
+	ApplyContactLabels(txs, nil, []string{"Favour Balogun"}, "Market & Small Vendors")
+	ApplyPaymentLabels(txs, []string{"03-Aug-2026|4500|Favour Balogun|purchase"}, "Market & Small Vendors")
+	if txs[0].Category != "Market & Small Vendors" || txs[0].DecisionBasis != "payment_label" {
+		t.Errorf("per-payment label must beat the person label: %q / %q", txs[0].Category, txs[0].DecisionBasis)
+	}
+}

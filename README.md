@@ -152,7 +152,20 @@ In Nigeria's informal economy, millions of businesses operate using personal acc
    Names containing commercial keywords (`Ventures`, `Enterprises`, `Stores`, `Logistics`, `Pharmacy`, `Farms`, `Tech`, `Saloon`, `Motors`, `Bakery`, `Kitchen`, `Plaza`, `Limited`, `Nig Ltd`) are classified as **Commercial & Business Operating Expenses**.
 3. **Market Vendors on Personal Accounts**:
    Transfers to recipients banking with Moniepoint (`| MONIE POINT |`) are routed to **Market & Small Vendors**. Most such accounts belong to traders and POS merchants, even when they are in a personal name. Vendors are never counted as Urgent 2k.
-4. **Your Own Labels**:
+4. **Purpose First, Then the Person**:
+   Transfer narrations are split into *counterparty* and *typed purpose* ([`internal/shazam/memo.go`](internal/shazam/memo.go)). The purpose decides each payment. Support uses a small vocabulary (upkeep, allowance, feeding, gift, sallah…), so any other purpose text ("cow leg", "2 bags") is treated as a probable purchase; Laya is asked "bought or given?". Generic words are never matched against names, so "Mama Tolu Food Stores" isn't family or food. Transfers with no purpose (most of them) are scored per person ([`internal/analyzer/people.go`](internal/analyzer/people.go)):
+
+   | Signal | Score |
+   | :--- | :--- |
+   | Shares a name with you | +2.5 |
+   | Money also comes back from them | +1.5 |
+   | Mostly round amounts (₦1,000+) | +1.0 |
+   | Mostly odd amounts (₦1,000+, like prices) | −1.5 |
+   | Moniepoint account | −2.0 |
+   | Purchase / support memos | ±1 each |
+
+   At +1.5 or above the person counts as family or a friend; at −1.5 or below, as a vendor. Anyone in between appears in the dashboard's **Who's who** panel for you to confirm.
+5. **Your Own Labels**:
    Every person row in the dashboard has 🏪 Vendor / 👪 Family buttons. Labels are stored only in your browser (`localStorage`) and sent with each audit as repeatable `vendor` / `family` form fields. They override every heuristic and the AI pass; name order and partial names are fine.
 5. **P2P Micro-Transfers**:
    Recipients without commercial suffixes are classified as **Family & Favors**.

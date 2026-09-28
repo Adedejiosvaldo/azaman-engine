@@ -63,9 +63,22 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 	hasTime := !raw.ParsedDate.IsZero() &&
 		(raw.ParsedDate.Hour() != 0 || raw.ParsedDate.Minute() != 0 || raw.ParsedDate.Second() != 0)
 
-	// 1. Try matching against our curated merchant dictionary
-	rule := FindRuleByKeyword(cleaned)
-	if rule != nil {
+	// 1. Try matching against our curated merchant dictionary. Person-to-person transfers are split
+	// into counterparty and purpose first: the purpose decides this payment, the name only matches
+	// merchant rules (so "Mama Tolu Stores" is not "family" and "Grace Food Ventures" is not "food").
+	counterparty, purpose := SplitMemo(raw.Description)
+	decoded.Counterparty, decoded.Purpose = counterparty, MaskPII(purpose)
+	rule, basis, purchaseGuess := selectRule(cleaned, counterparty, purpose, isCredit)
+	decoded.DecisionBasis = basis
+
+	if purchaseGuess {
+		// Money given uses a small vocabulary (upkeep, allowance, feeding...); anything else the
+		// sender typed ("cow leg", "2 bags", "balance for order") is most likely a purchase.
+		decoded.Merchant = titleCase(counterparty) + " (Vendor?)"
+		decoded.Category = VendorCategory
+		decoded.Classification = "Personal Purchase"
+		decoded.Confidence = 0.75 // below 0.9: Laya and the review panel may still correct it
+	} else if rule != nil {
 		decoded.Merchant = rule.Merchant
 		decoded.Category = rule.Category
 		decoded.Classification = rule.Classification
@@ -81,6 +94,10 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		if rule.IsLoan && isCredit {
 			decoded.Category = "Loan Disbursement"
 			decoded.Classification = "Borrowed Funds"
+		}
+		if basis == "memo" && counterparty != "" {
+			// Keep who it went to visible: "Tunde (Transport Fare)"
+			decoded.Merchant = titleCase(counterparty) + " (" + rule.Merchant + ")"
 		}
 
 		// Known late-night merchant: only assume midnight when the statement has no time of day
@@ -139,7 +156,30 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		}
 	}
 
+	// Urgent 2k is ₦1,000-₦15,000; smaller or larger person-to-person transfers are plain transfers.
+	if decoded.Classification == "Micro-Transfer (Urgent 2k)" && !decoded.Flags.IsUrgent2k {
+		decoded.Classification = "Personal Transfer"
+	}
+
 	return decoded
+}
+
+// selectRule picks the dictionary rule for a memo. For person-to-person transfers the typed
+// purpose is checked first; unmatched purpose text on a debit is reported as a purchase guess.
+// Without a purpose, only merchant rules are matched against the counterparty's name.
+func selectRule(cleaned, counterparty, purpose string, isCredit bool) (rule *MerchantRule, basis string, purchaseGuess bool) {
+	if counterparty == "" {
+		return FindRuleByKeyword(cleaned), "", false
+	}
+	if purpose != "" {
+		if r := FindRuleByKeyword(CleanMemo(purpose)); r != nil {
+			return r, "memo", false
+		}
+		if !isCredit {
+			return nil, "memo", true
+		}
+	}
+	return FindNameRule(counterparty), "name", false
 }
 
 // inferHeuristics handles unmatched memos with smart contextual deduction.

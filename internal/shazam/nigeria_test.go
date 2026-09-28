@@ -108,3 +108,45 @@ func TestCardFundingOwnWalletIsSelfTransferNotFee(t *testing.T) {
 		t.Errorf("GT investment fund subscription should be savings, got %q", fund.Category)
 	}
 }
+
+func TestSplitMemo(t *testing.T) {
+	cases := []struct{ memo, name, purpose string }{
+		{"Transfer to NGOZI AMAKA OBI | OPay | 1560803617 | 2 crates", "NGOZI AMAKA OBI", "2 crates"},
+		{"Transfer from olusegun james balogun | OPay | 707****670 | feeding ", "olusegun james balogun", "feeding"},
+		{"Transfer from OKAFOR TEMITOPE EZE | Palmpay | 901****883 | OKAFOR TEMITOPE EZE:9017467883", "OKAFOR TEMITOPE EZE", ""},
+		{"Transfer from IBRAHIM, KABIR ADIO | Kuda MFB | 858****054 | SENT ", "IBRAHIM, KABIR ADIO", ""},
+		{"Transfer to MUM - Weekend upkeep", "MUM", "Weekend upkeep"},
+		{"NIP/DR/0123456789/ADEBAYO SEGUN/URGENT 2K FOR FOOD", "ADEBAYO SEGUN", "URGENT 2K FOR FOOD"},
+		{"Third-Party Merchant Order | Chowdeck", "", ""},
+	}
+	for _, c := range cases {
+		name, purpose := SplitMemo(c.memo)
+		if name != c.name || purpose != c.purpose {
+			t.Errorf("%q: got (%q, %q), want (%q, %q)", c.memo, name, purpose, c.name, c.purpose)
+		}
+	}
+}
+
+func TestPurposeDecidesThePayment(t *testing.T) {
+	// Any item the sender typed is a purchase guess; support words stay family
+	buy := MatchAndDecode(models.RawTransaction{Description: "Transfer to FAVOUR IFEOLUWA BALOGUN | OPay | 4906137089 | cow leg", Debit: 4500})
+	if buy.Category != VendorCategory || buy.Flags.IsUrgent2k || buy.DecisionBasis != "memo" || buy.Confidence >= 0.9 {
+		t.Errorf("typed item should be a low-confidence purchase guess: %q basis=%q conf=%v", buy.Category, buy.DecisionBasis, buy.Confidence)
+	}
+	give := MatchAndDecode(models.RawTransaction{Description: "Transfer to FAVOUR IFEOLUWA BALOGUN | OPay | 4906137089 | allowance", Debit: 4500})
+	if give.Category != "Family & Favors" {
+		t.Errorf("support word should stay family, got %q", give.Category)
+	}
+	// Generic words in a NAME must not trigger rules
+	name := MatchAndDecode(models.RawTransaction{Description: "Transfer to MAMA TOLU FOOD STORES | OPay | 4906137089", Debit: 3000})
+	if name.Category == "Family & Favors" || name.Category == "Food & Dining" {
+		t.Errorf("'Mama ... Food Stores' is a business name, got %q", name.Category)
+	}
+}
+
+func TestSmallTransferIsNotLabelledUrgent2k(t *testing.T) {
+	d := MatchAndDecode(models.RawTransaction{Description: "Transfer to NGOZI AMAKA OBI | OPay | 1560803617", Debit: 350})
+	if d.Classification == "Micro-Transfer (Urgent 2k)" || d.Flags.IsUrgent2k {
+		t.Errorf("₦350 is below the Urgent 2k range, got %q", d.Classification)
+	}
+}

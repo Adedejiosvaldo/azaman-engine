@@ -42,6 +42,7 @@ type LayaDecision struct {
 	IsSilentLeak    bool    `json:"is_silent_leak"`
 	IsUrgent2k      bool    `json:"is_urgent_2k"`
 	IsTaxDeductible bool    `json:"is_tax_deductible"`
+	IsPurchase      bool    `json:"is_purchase"` // payment to a person for something bought, not support
 }
 
 // maxResponseBytes bounds how much of a sidecar response is read into RAM.

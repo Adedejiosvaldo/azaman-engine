@@ -5,6 +5,7 @@ import (
 	"math"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -413,7 +414,53 @@ func ApplyContactLabels(txs []models.DecodedTransaction, vendors, family []strin
 				tx.Flags.IsUrgent2k = tx.Debit >= 1000 && tx.Debit <= 15000
 			}
 			tx.Confidence = 1.0
+			tx.DecisionBasis = "label"
 			break
+		}
+	}
+}
+
+// ApplyPaymentLabels applies per-payment overrides, for exceptions to a person's usual role
+// (bought something from a relative, or helped out a vendor). Each label is
+// "<date>|<amount>|<counterparty>|purchase" or "...|support"; they win over person labels.
+func ApplyPaymentLabels(txs []models.DecodedTransaction, labels []string, vendorCategory string) {
+	for _, raw := range labels {
+		parts := strings.Split(raw, "|")
+		if len(parts) != 4 {
+			continue
+		}
+		amount, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		if err != nil {
+			continue
+		}
+		want := nameTokens(parts[2])
+		kind := strings.TrimSpace(parts[3])
+		for i := range txs {
+			tx := &txs[i]
+			if tx.Date != strings.TrimSpace(parts[0]) || math.Abs(tx.Debit-amount) > 0.01 {
+				continue
+			}
+			have := map[string]bool{}
+			for _, t := range nameTokens(tx.Counterparty) {
+				have[t] = true
+			}
+			if len(want) == 0 || !containsAllTokens(have, want) {
+				continue
+			}
+			switch kind {
+			case "purchase":
+				tx.Category = vendorCategory
+				tx.Classification = "Personal Purchase"
+				tx.Flags.IsUrgent2k = false
+			case "support":
+				tx.Category = "Family & Favors"
+				tx.Classification = "Family Support"
+				tx.Flags.IsUrgent2k = tx.Debit >= 1000 && tx.Debit <= 15000
+			default:
+				continue
+			}
+			tx.Confidence = 1.0
+			tx.DecisionBasis = "payment_label"
 		}
 	}
 }

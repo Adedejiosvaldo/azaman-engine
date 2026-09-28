@@ -60,6 +60,11 @@ type DecodedTransaction struct {
 	DuplicateGroup string           `json:"duplicate_group,omitempty"`
 	ReversalGroup  string           `json:"reversal_group,omitempty"`
 	FeeType        string           `json:"fee_type,omitempty"`
+	// Person-to-person transfers: who the other party is, what the memo says the payment was for,
+	// and which signal decided the category ("memo", "person", "label", "payment_label").
+	Counterparty  string `json:"counterparty,omitempty"`
+	Purpose       string `json:"purpose,omitempty"`
+	DecisionBasis string `json:"decision_basis,omitempty"`
 }
 
 // IsSpend reports whether the transaction is a real outflow (a debit that is not internal).

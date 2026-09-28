@@ -154,6 +154,7 @@ func HandleAudit(c *gin.Context) {
 
 	// 6a. User labels: people the user marked as vendors or family in the dashboard (kept in their browser only)
 	analyzer.ApplyContactLabels(decodedTxs, c.PostFormArray("vendor"), c.PostFormArray("family"), shazam.VendorCategory)
+	analyzer.ApplyPaymentLabels(decodedTxs, c.PostFormArray("payment_label"), shazam.VendorCategory)
 
 	// 6b. Optional Laya AI System 1 Decision Pass for Ambiguous/Low-Confidence Memos
 	layaClient := ai.GetLayaClient()
@@ -169,7 +170,7 @@ func HandleAudit(c *gin.Context) {
 				seenMemos[cleanKey] = true
 				ambiguousItems = append(ambiguousItems, ai.LayaMemoItem{
 					ID:       tx.ID,
-					Memo:     tx.CleanMemo,
+					Memo:     layaText(tx),
 					Amount:   math.Abs(tx.Amount),
 					RawMemo:  tx.RawDescription,
 					Hour:     knownHour(tx),
@@ -209,6 +210,9 @@ func HandleAudit(c *gin.Context) {
 					// Only override when Laya is more confident than the rules, and never for rows
 					// whose type is already certain (fees, savings, loans).
 					if ok && layaEligible(*tx) && dec.Confidence > tx.Confidence {
+						if tx.Counterparty != "" {
+							tx.DecisionBasis = "ai" // person scoring leaves AI-decided rows alone
+						}
 						if dec.Category != "" {
 							tx.Category = dec.Category
 						}
@@ -231,6 +235,12 @@ func HandleAudit(c *gin.Context) {
 						}
 						if dec.IsTaxDeductible {
 							tx.Flags.IsTaxDeductible = true
+						}
+						// "Bought, not given": a payment to a person for goods or a service
+						if dec.IsPurchase && tx.Counterparty != "" && tx.Debit > 0 {
+							tx.Category = shazam.VendorCategory
+							tx.Classification = "Personal Purchase"
+							tx.Flags.IsUrgent2k = false
 						}
 					}
 				}
@@ -380,4 +390,13 @@ func knownHour(tx models.DecodedTransaction) *int {
 	}
 	h := t.Hour()
 	return &h
+}
+
+// layaText is what Laya reads: the typed purpose of a person-to-person transfer when there is one
+// (it carries the meaning; the name only adds noise), otherwise the cleaned memo.
+func layaText(tx models.DecodedTransaction) string {
+	if tx.Purpose != "" {
+		return tx.Purpose
+	}
+	return tx.CleanMemo
 }

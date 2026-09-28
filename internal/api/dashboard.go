@@ -147,6 +147,9 @@ func HandleDashboard(c *gin.Context) {
       gap: 16px;
       margin-top: 28px;
     }
+    .basis { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .fix-select { margin-top: 4px; background: #1f2937; color: var(--text); border: 1px solid #374151; border-radius: 6px; font-size: 11px; padding: 2px 4px; }
+    .person-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
     .internal-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -291,6 +294,11 @@ func HandleDashboard(c *gin.Context) {
         <div class="kpi-sub" id="internal-summary">—</div>
       </div>
 
+      <div class="internal-card hidden" id="people-card">
+        <div class="leak-title">🧑‍🤝‍🧑 Who's who <span>Confirm the people we're unsure about</span></div>
+        <div id="people-list"></div>
+      </div>
+
       <div class="leaks-grid">
         <div class="leak-card midnight">
           <div class="leak-title">🌙 Midnight Cash Leak <span>10PM - 4AM</span></div>
@@ -374,8 +382,8 @@ func HandleDashboard(c *gin.Context) {
     function loadLabels() {
       try {
         const l = JSON.parse(localStorage.getItem(LABELS_KEY)) || {};
-        return { vendor: l.vendor || [], family: l.family || [] };
-      } catch (e) { return { vendor: [], family: [] }; }
+        return { vendor: l.vendor || [], family: l.family || [], payment: l.payment || [] };
+      } catch (e) { return { vendor: [], family: [], payment: [] }; }
     }
 
     function saveLabels(l) {
@@ -398,6 +406,16 @@ func HandleDashboard(c *gin.Context) {
       uploadStatement(); // re-run the audit with the new label
     }
 
+    // Per-payment exception: "<date>|<amount>|<name>|purchase|support"
+    function setPaymentLabel(date, amount, name, kind) {
+      const l = loadLabels();
+      const prefix = date + '|' + amount + '|' + name + '|';
+      l.payment = l.payment.filter(p => !p.startsWith(prefix));
+      l.payment.push(prefix + kind);
+      saveLabels(l);
+      uploadStatement();
+    }
+
     function removeLabel(kind, name) {
       const l = loadLabels();
       l[kind] = l[kind].filter(n => n !== name);
@@ -410,9 +428,21 @@ func HandleDashboard(c *gin.Context) {
       const chips = [];
       l.vendor.forEach(n => chips.push('<span class="chip">🏪 ' + esc(n) + '<button data-remove="vendor" data-name="' + esc(n) + '">×</button></span>'));
       l.family.forEach(n => chips.push('<span class="chip">👪 ' + esc(n) + '<button data-remove="family" data-name="' + esc(n) + '">×</button></span>'));
+      l.payment.forEach(p => {
+        const [d, a, n, k] = p.split('|');
+        chips.push('<span class="chip">🧾 ' + esc(d) + ' ' + fmtNaira(a) + ' ' + esc(n) + ' → ' + esc(k) + '<button data-remove="payment" data-name="' + esc(p) + '">×</button></span>');
+      });
       bar.innerHTML = chips.length ? 'Your labels (saved in this browser only): ' + chips.join('') : '';
       bar.classList.toggle('hidden', chips.length === 0);
     }
+
+    document.addEventListener('change', e => {
+      const sel = e.target.closest('select.fix-select');
+      if (!sel || !sel.value) return;
+      const [scope, kind] = sel.value.split(':');
+      if (scope === 'person') setLabel(kind, sel.dataset.name);
+      else setPaymentLabel(sel.dataset.date, sel.dataset.amount, sel.dataset.name, kind);
+    });
 
     document.addEventListener('click', e => {
       const b = e.target.closest('button');
@@ -436,6 +466,7 @@ func HandleDashboard(c *gin.Context) {
       const labels = loadLabels();
       labels.vendor.forEach(n => formData.append('vendor', n));
       labels.family.forEach(n => formData.append('family', n));
+      labels.payment.forEach(p => formData.append('payment_label', p));
 
       document.getElementById('spinner').style.display = 'block';
       document.getElementById('results').classList.add('hidden');
@@ -474,6 +505,17 @@ func HandleDashboard(c *gin.Context) {
       document.getElementById('runway').textContent = s.runway_months >= 900 ? '∞ (Self-Sustaining)' : s.runway_months + ' mos';
       document.getElementById('burn-sub').textContent = 'Monthly Burn: ' + fmtNaira(s.avg_monthly_burn);
 
+      // Who's who: people the engine couldn't settle, ranked by money sent
+      const people = report.people_review || [];
+      const guessText = { family: '👪 probably family / friend', vendor: '🏪 probably a vendor', unsure: '❓ not sure' };
+      document.getElementById('people-list').innerHTML = people.map(p =>
+        '<div class="person-row"><div><strong>' + esc(p.name) + '</strong> · ' + p.count + ' payment(s) · ' + fmtNaira(p.total_sent) +
+        '<div class="basis">' + guessText[p.guess] + ' — ' + esc(p.reasons.join('; ')) + '</div></div>' +
+        '<div><button class="label-btn" data-kind="vendor" data-name="' + esc(p.name) + '">🏪 Vendor</button>' +
+        '<button class="label-btn" data-kind="family" data-name="' + esc(p.name) + '">👪 Family</button></div></div>'
+      ).join('');
+      document.getElementById('people-card').classList.toggle('hidden', people.length === 0);
+
       // Own-account and savings movements, shown separately so the totals above stay "real"
       const it = report.internal_transfers || {};
       const moneyShort = n => '₦' + Math.round(Number(n) || 0).toLocaleString('en-NG');
@@ -511,12 +553,19 @@ func HandleDashboard(c *gin.Context) {
         const amtColor = tx.amount > 0 ? 'color: var(--accent);' : 'color: var(--text);';
         const sign = tx.amount > 0 ? '+' : '';
 
-        const person = counterpartyName(tx.raw_description || '');
+        const person = tx.counterparty || counterpartyName(tx.raw_description || '');
+        const basisText = { memo: 'decided by the memo', person: 'decided by who they are', name: 'guessed from the name',
+          label: 'your label', payment_label: 'your label for this payment', ai: 'decided by Laya AI' }[tx.decision_basis] || '';
         let labelBtns = '';
+        if (basisText) labelBtns += '<div class="basis">' + (tx.purpose ? 'Purpose: "' + esc(tx.purpose) + '" · ' : '') + esc(basisText) + '</div>';
         if (person && tx.amount < 0) {
-          labelBtns = '<div>' +
-            '<button class="label-btn" data-kind="vendor" data-name="' + esc(person) + '" title="I buy from this person">🏪 Vendor</button>' +
-            '<button class="label-btn" data-kind="family" data-name="' + esc(person) + '" title="Family or friend">👪 Family</button></div>';
+          labelBtns += '<select class="fix-select" data-name="' + esc(person) + '" data-date="' + esc(tx.date || '') + '" data-amount="' + Math.abs(tx.amount) + '">' +
+            '<option value="">Fix…</option>' +
+            '<option value="payment:purchase">This payment was a purchase</option>' +
+            '<option value="payment:support">This payment was support / a gift</option>' +
+            '<option value="person:vendor">Always: I buy from ' + esc(person) + '</option>' +
+            '<option value="person:family">Always: ' + esc(person) + ' is family / a friend</option>' +
+            '</select>';
         }
 
         tr.innerHTML =

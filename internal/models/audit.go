@@ -217,7 +217,19 @@ type AuditReport struct {
 	Insights     NigeriaInsights         `json:"nigeria_insights"`
 	Tax          TaxEstimate             `json:"tax_estimate"`
 	Business     BusinessSplit           `json:"business_split"`
+	PeopleReview []PersonReview          `json:"people_review"`
 	Transactions []DecodedTransaction    `json:"transactions"`
 	BankDetected string                  `json:"bank_detected"`
 	AuditMeta    AuditMeta               `json:"audit_meta"`
+}
+
+// PersonReview is a counterparty the engine is unsure about (family/friend vs vendor), ranked by
+// money sent, with the reasons for its guess. The dashboard asks the user to confirm these.
+type PersonReview struct {
+	Name      string   `json:"name"`
+	Count     int      `json:"count"`
+	TotalSent float64  `json:"total_sent"`
+	Guess     string   `json:"guess"` // "family", "vendor" or "unsure"
+	Score     float64  `json:"score"` // > 0 leans family, < 0 leans vendor
+	Reasons   []string `json:"reasons"`
 }

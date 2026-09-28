@@ -24,6 +24,7 @@ ASSIGNABLE = {c["name"]: c["description"] for c in _TAXONOMY if c["assignable"]}
 DEFAULT_CATEGORY = "Personal Discretionary"
 LEAK_CATEGORIES = {"Late Night Food & Lounges", "Betting & Gaming", "Subscriptions & TV"}
 TAX_CATEGORIES = {"Tech & Cloud Infrastructure", "Workspace & Co-working"}
+PURCHASE_CATEGORIES = {"Market & Small Vendors", "Food & Dining", "Shopping & Retail", "Personal Care"}
 URGENT_2K_MIN, URGENT_2K_MAX = 1000.0, 15000.0
 
 # ==================== LAYA ROUTER ====================
@@ -65,6 +66,7 @@ class DecisionResult(BaseModel):
     is_silent_leak: bool
     is_urgent_2k: bool
     is_tax_deductible: bool
+    is_purchase: bool = False
 
 
 CATEGORY_QUESTIONS = {
@@ -80,6 +82,10 @@ CATEGORY_QUESTIONS = {
     "is_urgent_2k": {
         "type": "noul",
         "instructions": "Is this an 'urgent 2k' micro-favor or small personal transfer under 15,000 NGN?"
+    },
+    "is_purchase": {
+        "type": "noul",
+        "instructions": "Was this payment to a person for something bought (goods, food items, a service), rather than money given as support, a gift or a favour?"
     },
     "is_tax_deductible": {
         "type": "noul",
@@ -181,7 +187,7 @@ def fallback_decision(item: MemoItem, text: str) -> Dict[str, Any]:
 
 def build_decision(item: MemoItem, text: str, category: str, confidence: float,
                    leak_prob: Optional[float] = None, u2k_prob: Optional[float] = None,
-                   tax_prob: Optional[float] = None) -> Dict[str, Any]:
+                   tax_prob: Optional[float] = None, purchase_prob: Optional[float] = None) -> Dict[str, Any]:
     if category not in ASSIGNABLE:
         category = DEFAULT_CATEGORY
 
@@ -199,8 +205,14 @@ def build_decision(item: MemoItem, text: str, category: str, confidence: float,
     if tax_prob is not None:
         is_tax = is_tax or (tax_prob > 0.6 and category in TAX_CATEGORIES | {"Commercial & Business"})
 
+    is_purchase = category in PURCHASE_CATEGORIES
+    if purchase_prob is not None:
+        is_purchase = is_purchase or purchase_prob > 0.5
+    if is_purchase:
+        is_u2k = False
+
     if item.is_credit:
-        is_leak = is_u2k = is_tax = False
+        is_leak = is_u2k = is_tax = is_purchase = False
 
     classification = "Personal Discretionary"
     if is_tax:
@@ -218,6 +230,7 @@ def build_decision(item: MemoItem, text: str, category: str, confidence: float,
         "is_silent_leak": is_leak,
         "is_urgent_2k": is_u2k,
         "is_tax_deductible": is_tax,
+        "is_purchase": is_purchase,
     }
 
 
@@ -235,6 +248,7 @@ def laya_decision(item: MemoItem, text: str) -> Dict[str, Any]:
         leak_prob=answers.get("is_silent_leak", {}).get("noul", 0.0),
         u2k_prob=answers.get("is_urgent_2k", {}).get("noul", 0.0),
         tax_prob=answers.get("is_tax_deductible", {}).get("noul", 0.0),
+        purchase_prob=answers.get("is_purchase", {}).get("noul", 0.0),
     )
 
 

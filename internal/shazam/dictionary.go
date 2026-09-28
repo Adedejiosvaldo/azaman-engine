@@ -15,6 +15,7 @@ type MerchantRule struct {
 	IsSavings      bool     // Own savings/investment wallet (internal movement, not spend)
 	IsLoan         bool     // Loan app (credit = disbursement, debit = repayment)
 	IsSelfTransfer bool     // Money moving between the holder's own accounts (not spend or income)
+	PurposeOnly    bool     // Generic words ("mama", "rent", "chop"): match the memo purpose, never a person's name
 	Confidence     float64  // Base confidence score
 }
 
@@ -431,6 +432,7 @@ var MerchantRegistry = []MerchantRule{
 	{
 		Patterns:       []string{"house rent", "rent", "caution fee", "agency fee", "lawma", "water bill"},
 		Merchant:       "Rent & Housing",
+		PurposeOnly:    true,
 		Category:       "Rent & Housing",
 		Classification: "Essential Living",
 		Confidence:     0.92,
@@ -540,6 +542,7 @@ var MerchantRegistry = []MerchantRule{
 	{
 		Patterns:       []string{"t fare", "tfare", "t-fare", "transport fare", "transpo", "okada", "keke", "danfo", "brt"},
 		Merchant:       "Transport Fare",
+		PurposeOnly:    true,
 		Category:       "Commute & Transit",
 		Classification: "Essential Living",
 		Confidence:     0.9,
@@ -547,6 +550,7 @@ var MerchantRegistry = []MerchantRule{
 	{
 		Patterns:       []string{"chop money", "chop", "food money", "soup money", "market money", "foodstuff", "foodstuffs"},
 		Merchant:       "Food & Market Money",
+		PurposeOnly:    true,
 		Category:       "Food & Dining",
 		Classification: "Essential Living",
 		Confidence:     0.9,
@@ -554,6 +558,7 @@ var MerchantRegistry = []MerchantRule{
 	{
 		Patterns:       []string{"hair", "barbing", "barber", "makeup", "nails", "lashes"},
 		Merchant:       "Personal Care & Grooming",
+		PurposeOnly:    true,
 		Category:       "Personal Care",
 		Classification: "Personal Discretionary",
 		Confidence:     0.88,
@@ -563,18 +568,39 @@ var MerchantRegistry = []MerchantRule{
 	{
 		Patterns:       []string{"urgent 2k", "urgent2k", "urgent 5k", "urgent 10k", "abeg", "borrow me", "small money", "help me", "sapa", "emergency"},
 		Merchant:       "Urgent 2k Favors",
+		PurposeOnly:    true,
 		Category:       "Family & Favors",
 		Classification: "Micro-Transfer (Urgent 2k)",
 		Confidence:     0.99,
 	},
 	{
 		Patterns: []string{"mum", "dad", "mama", "papa", "mummy", "daddy", "brother", "sister", "family", "house upkeep", "upkeep",
-			"feeding", "iya", "baba", "aunty", "uncle", "pikin", "my wife", "my husband", "black tax"},
+			"feeding", "iya", "baba", "aunty", "uncle", "pikin", "my wife", "my husband", "black tax",
+			"allowance", "gift", "birthday", "sallah", "ileya", "xmas", "christmas", "hospital bill", "support", "assistance", "for you"},
 		Merchant:       "Family Upkeep",
+		PurposeOnly:    true,
 		Category:       "Family & Favors",
 		Classification: "Micro-Transfer (Urgent 2k)",
 		Confidence:     0.95,
 	},
+}
+
+// FindNameRule matches a counterparty's name against merchant rules only (church names, payment
+// gateways, known stores), skipping PurposeOnly rules whose generic words would misfire on names.
+func FindNameRule(name string) *MerchantRule {
+	lower := strings.ToLower(name)
+	for i := range MerchantRegistry {
+		rule := &MerchantRegistry[i]
+		if rule.PurposeOnly {
+			continue
+		}
+		for _, pattern := range rule.Patterns {
+			if matchPattern(lower, pattern) {
+				return rule
+			}
+		}
+	}
+	return nil
 }
 
 // FindRuleByKeyword returns the best matching rule for the cleaned memo.
