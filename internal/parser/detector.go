@@ -99,3 +99,14 @@ func ExtractAccountHolder(sampleText string) string {
 	}
 	return strings.TrimSpace(strings.Trim(m[1], ",. "))
 }
+
+var gtbFilenameRe = regexp.MustCompile(`(?i)^AC_.+_FullStmt\.pdf$`)
+
+// DetectBankFromFilename recognises banks by their e-statement file naming. GTBank PDFs carry the
+// letterhead as an image, so their text alone can't identify the issuer.
+func DetectBankFromFilename(name string) string {
+	if gtbFilenameRe.MatchString(strings.TrimSpace(name)) {
+		return BankGTB
+	}
+	return ""
+}

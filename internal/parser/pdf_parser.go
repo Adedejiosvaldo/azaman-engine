@@ -3,6 +3,7 @@ package parser
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"regexp"
 	"sort"
@@ -29,6 +30,7 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("PDF extraction error: %v", r)
+			log.Printf("[PDF-DIAG] recovered panic: %v", r)
 		}
 	}()
 
@@ -58,16 +60,51 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	numPages := pdfReader.NumPage()
 	var allLines []string
 	var sampleText strings.Builder
+	var nullPages, rowPages, plainPages, contentPages int
+	hintBank := bankName
+	var opayRows int
+	// Diagnostic summary: counts and bank names only, never statement text.
+	defer func() {
+		log.Printf("[PDF-DIAG] pages=%d null=%d byRow=%d content=%d plain=%d lines=%d hint=%q detected=%q opayRows=%d finalRows=%d err=%v",
+			numPages, nullPages, rowPages, contentPages, plainPages, len(allLines), hintBank, detectedBank, opayRows, len(txs), err)
+		if len(txs) == 0 {
+			for i := 0; i < len(allLines) && i < 25; i++ {
+				log.Printf("[PDF-DIAG] line %02d shape: %s", i, lineShape(allLines[i]))
+			}
+		}
+	}()
 
 	for p := 1; p <= numPages; p++ {
 		page := pdfReader.Page(p)
 		if page.V.IsNull() {
+			nullPages++
 			continue
 		}
 
 		// Try extracting structured rows first
 		rows, rowErr := page.GetTextByRow()
+
+		// GetTextByRow ignores Td/cm positioning; if the page collapsed into a couple of rows,
+		// rebuild lines from the fully interpreted content instead.
+		if rowErr == nil && len(rows) <= 2 {
+			lines, cErr := contentRowLines(page)
+			if cErr != nil {
+				log.Printf("[PDF-DIAG] page %d: %v", p, cErr)
+			}
+			if len(lines) > len(rows) {
+				contentPages++
+				for _, joined := range lines {
+					allLines = append(allLines, joined)
+					if sampleText.Len() < 8192 {
+						sampleText.WriteString(joined + "\n")
+					}
+				}
+				continue
+			}
+		}
+
 		if rowErr == nil && len(rows) > 0 {
+			rowPages++
 			// Sort rows top-to-bottom
 			sort.Slice(rows, func(i, j int) bool {
 				return rows[i].Position > rows[j].Position
@@ -91,6 +128,7 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 			}
 		} else {
 			// Fallback to plain text
+			plainPages++
 			text, textErr := page.GetPlainText(nil)
 			if textErr == nil {
 				lines := strings.Split(text, "\n")
@@ -124,6 +162,7 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	// Use specialized column-aware parser for OPay statements if detected
 	if detectedBank == BankOPay {
 		opayTxs := parseOPayPDFRows(pdfReader, detectedBank, defaultCurrency)
+		opayRows = len(opayTxs)
 		if len(opayTxs) > 0 {
 			return opayTxs, detectedBank, nil
 		}

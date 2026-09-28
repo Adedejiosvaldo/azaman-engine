@@ -78,6 +78,9 @@ func HandleAudit(c *gin.Context) {
 	// 4. Detect bank if not provided
 	bankName := bankOverride
 	if bankName == "" {
+		bankName = parser.DetectBankFromFilename(fileHeader.Filename)
+	}
+	if bankName == "" {
 		sampleSize := 4096
 		if len(fileBytes) < sampleSize {
 			sampleSize = len(fileBytes)

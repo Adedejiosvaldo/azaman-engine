@@ -51,3 +51,16 @@ func TestParseDateExtraLayouts(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectBankFromFilename(t *testing.T) {
+	cases := map[string]string{
+		"AC_OKAFOR  CHIOMA ADA_AUGUST 2026_432R005818528_FullStmt.pdf": BankGTB,
+		"CHINEDU OLUMIDE BALOGUN_7241845192_20260925221611.pdf":        "",
+		"statement.csv": "",
+	}
+	for name, want := range cases {
+		if got := DetectBankFromFilename(name); got != want {
+			t.Errorf("%q: want %q, got %q", name, want, got)
+		}
+	}
+}
