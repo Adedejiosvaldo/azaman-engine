@@ -147,6 +147,14 @@ func HandleDashboard(c *gin.Context) {
       gap: 16px;
       margin-top: 28px;
     }
+    .internal-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .internal-card .kpi-sub { font-size: 14px; color: var(--text); margin-top: 6px; }
     .kpi-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -259,12 +267,12 @@ func HandleDashboard(c *gin.Context) {
         <div class="kpi-card">
           <div class="kpi-label">Total Inflow</div>
           <div class="kpi-value green" id="inflow">₦0.00</div>
-          <div class="kpi-sub" id="inflow-sub">Deposits & Retainers</div>
+          <div class="kpi-sub" id="inflow-sub">Real income (excludes own transfers & savings)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Total Outflow</div>
           <div class="kpi-value red" id="outflow">₦0.00</div>
-          <div class="kpi-sub" id="outflow-sub">Expenses & Burn</div>
+          <div class="kpi-sub" id="outflow-sub">Real spending (excludes own transfers & savings)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Net Retained</div>
@@ -276,6 +284,11 @@ func HandleDashboard(c *gin.Context) {
           <div class="kpi-value" id="runway" style="color: var(--blue);">0 mos</div>
           <div class="kpi-sub" id="burn-sub">Avg Monthly Burn: ₦0</div>
         </div>
+      </div>
+
+      <div class="internal-card" id="internal-card">
+        <div class="leak-title">🔁 Moved between your accounts <span>Not income · Not spending</span></div>
+        <div class="kpi-sub" id="internal-summary">—</div>
       </div>
 
       <div class="leaks-grid">
@@ -460,6 +473,16 @@ func HandleDashboard(c *gin.Context) {
       document.getElementById('margin').textContent = 'Margin: ' + s.profit_margin_pct + '%';
       document.getElementById('runway').textContent = s.runway_months >= 900 ? '∞ (Self-Sustaining)' : s.runway_months + ' mos';
       document.getElementById('burn-sub').textContent = 'Monthly Burn: ' + fmtNaira(s.avg_monthly_burn);
+
+      // Own-account and savings movements, shown separately so the totals above stay "real"
+      const it = report.internal_transfers || {};
+      const moneyShort = n => '₦' + Math.round(Number(n) || 0).toLocaleString('en-NG');
+      const inTotal = (it.savings_withdrawals || 0) + (it.self_transfers_in || 0);
+      const outTotal = (it.savings_deposits || 0) + (it.self_transfers_out || 0);
+      document.getElementById('internal-summary').textContent = (inTotal || outTotal)
+        ? moneyShort(inTotal) + ' in (savings ' + moneyShort(it.savings_withdrawals) + ', own transfers ' + moneyShort(it.self_transfers_in) + ')' +
+          ' · ' + moneyShort(outTotal) + ' out (savings ' + moneyShort(it.savings_deposits) + ', own transfers ' + moneyShort(it.self_transfers_out) + ')'
+        : 'No transfers between your own accounts or savings in this statement.';
 
       const leaks = report.cash_leaks;
       document.getElementById('midnight-amt').textContent = fmtNaira(leaks.midnight_leak.total_amount);
