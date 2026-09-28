@@ -167,7 +167,7 @@ In Nigeria's informal economy, millions of businesses operate using personal acc
    At +1.5 or above the person counts as family or a friend; at −1.5 or below, as a vendor. Anyone in between appears in the dashboard's **Who's who** panel for you to confirm.
 5. **Your Own Labels**:
    Every person row in the dashboard has 🏪 Vendor / 👪 Family buttons. Labels are stored only in your browser (`localStorage`) and sent with each audit as repeatable `vendor` / `family` form fields. They override every heuristic and the AI pass; name order and partial names are fine.
-5. **P2P Micro-Transfers**:
+6. **P2P Micro-Transfers**:
    Recipients without commercial suffixes are classified as **Family & Favors**.
 
 ---
