@@ -39,7 +39,9 @@ RUN if [ "$PRELOAD_LAYA" = "1" ]; then \
       python -c "from laya import Router; Router(preload=True); print('Laya checkpoints cached')"; \
     fi
 
-COPY sidecar/laya_service.py sidecar/categories.json sidecar/
+COPY sidecar/laya_service.py sidecar/memo_model.py sidecar/categories.json sidecar/
+# A trained memo model is personal data: mount it at runtime
+# (-v ./sidecar/models:/app/sidecar/models:ro), never bake it into the image.
 COPY --from=engine /out/server /app/server
 COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod 0555 /app/entrypoint.sh /app/server \

@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .venv/
 deploy/.env
+
+# Your labelled memos and the model trained on them (personal data)
+sidecar/data/
+sidecar/models/

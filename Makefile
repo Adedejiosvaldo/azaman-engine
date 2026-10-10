@@ -3,7 +3,7 @@ LAYA_PORT  ?= 8001
 VENV       := sidecar/.venv
 PY         := $(VENV)/bin/python
 
-.PHONY: dev api sidecar setup test build clean
+.PHONY: dev api sidecar setup test build clean labels train
 
 # Run the Go API and the Laya sidecar together; Ctrl-C stops both.
 dev: $(VENV)
@@ -26,8 +26,18 @@ $(VENV): sidecar/requirements.txt
 	$(PY) -m pip install -q --upgrade pip
 	$(PY) -m pip install -q -r sidecar/requirements.txt || \
 		(echo "laya unavailable; installing core sidecar deps only" && \
-		 $(PY) -m pip install -q fastapi uvicorn pydantic)
+		 $(PY) -m pip install -q fastapi uvicorn pydantic scikit-learn)
 	@touch $(VENV)
+
+# Memo model: export memos from an audit JSON to label, then train on the labels.
+#   make labels AUDIT=tmp/audit.json   ->  edit sidecar/data/labels.csv  ->  make train
+AUDIT  ?= tmp/audit.json
+LABELS ?= sidecar/data/labels.csv
+labels: $(VENV)
+	$(PY) sidecar/memo_model.py export $(AUDIT) $(LABELS)
+
+train: $(VENV)
+	$(PY) sidecar/memo_model.py train $(LABELS)
 
 test:
 	go test ./...

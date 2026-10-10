@@ -131,5 +131,56 @@ class LayaConfidenceTest(unittest.TestCase):
         self.assertLessEqual(d["confidence"], 0.7)
 
 
+class MemoModelTest(unittest.TestCase):
+    def test_train_save_load_and_serve(self):
+        import csv
+        import tempfile
+        from pathlib import Path
+
+        from sidecar import memo_model
+
+        rows = [("transport fare", "Commute & Transit"), ("t fare to school", "Commute & Transit"),
+                ("bus fare", "Commute & Transit"), ("okada fare", "Commute & Transit"),
+                ("2 bags of rice", "Market & Small Vendors"), ("bag of beans", "Market & Small Vendors"),
+                ("balance for curtain", "Market & Small Vendors"), ("tomatoes and pepper", "Market & Small Vendors"),
+                ("birthday gift", "Family & Favors"), ("feeding for the week", "Family & Favors"),
+                ("enjoy yourself", "Family & Favors"), ("allowance", "Family & Favors"),
+                ("one-off", "Education")]  # too few examples to learn
+        with tempfile.TemporaryDirectory() as d:
+            labels = Path(d) / "labels.csv"
+            with labels.open("w", newline="") as fh:
+                w = csv.writer(fh)
+                w.writerow(["memo", "amount", "suggested", "label"])
+                w.writerows([(m, 1000, "", l) for m, l in rows])
+            report = memo_model.train(str(labels), Path(d) / "m.joblib")
+            self.assertEqual(report["dropped"], ["Education"])
+            model = memo_model.load(Path(d) / "m.joblib")
+
+        category, prob = model.predict("fare to work")
+        self.assertEqual(category, "Commute & Transit")
+
+        old = svc.memo_model
+        svc.memo_model = model
+        try:
+            item = svc.MemoItem(id="1", memo="3 bags of rice", amount=30000)
+            d = svc.memo_model_decision(item, item.memo)
+        finally:
+            svc.memo_model = old
+        self.assertEqual(d["category"], "Market & Small Vendors")
+        self.assertLessEqual(d["confidence"], svc.MEMO_MODEL_MAX_CONFIDENCE)
+
+    def test_unknown_label_is_rejected(self):
+        import tempfile
+        from pathlib import Path
+
+        from sidecar import memo_model
+
+        with tempfile.TemporaryDirectory() as d:
+            labels = Path(d) / "labels.csv"
+            labels.write_text("memo,amount,suggested,label\nfoo,1,,Not A Category\n")
+            with self.assertRaises(SystemExit):
+                memo_model.train(str(labels), Path(d) / "m.joblib")
+
+
 if __name__ == "__main__":
     unittest.main()

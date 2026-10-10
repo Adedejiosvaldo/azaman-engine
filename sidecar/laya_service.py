@@ -42,6 +42,36 @@ if os.getenv("LAYA_DISABLE") != "1":
         print(f"[LAYA-SIDECAR] Laya package not loaded ({e}). Running in high-speed fallback mode.")
 
 
+# ==================== YOUR TRAINED MEMO MODEL ====================
+# Trained on your own labelled memos (see memo_model.py). Preferred over Laya when present.
+try:
+    import memo_model as _memo_model
+except ImportError:  # imported as a package in tests
+    from sidecar import memo_model as _memo_model
+
+memo_model = None
+if os.getenv("MEMO_MODEL_DISABLE") != "1":
+    try:
+        memo_model = _memo_model.load()
+        if memo_model:
+            print(f"[LAYA-SIDECAR] Memo model loaded (cross-validated accuracy {memo_model.accuracy:.0%}).")
+    except Exception as e:
+        print(f"[LAYA-SIDECAR] Memo model not loaded ({e}).")
+
+# The memo model answers only when this sure, and never above the Go dictionary rules (0.9+).
+MEMO_MODEL_MIN_PROB = 0.5
+MEMO_MODEL_MAX_CONFIDENCE = 0.89
+
+
+def memo_model_decision(item: "MemoItem", text: str) -> Optional[Dict[str, Any]]:
+    if memo_model is None or not text.strip():
+        return None
+    category, prob = memo_model.predict(text)
+    if prob < MEMO_MODEL_MIN_PROB:
+        return None
+    return build_decision(item, text, category, min(prob, MEMO_MODEL_MAX_CONFIDENCE))
+
+
 # ==================== REQUEST / RESPONSE MODELS ====================
 class MemoItem(BaseModel):
     id: str = Field(max_length=64)
@@ -176,6 +206,13 @@ FALLBACK_RULES = [
 ]
 
 
+def rule_decision(item: MemoItem, text: str) -> Optional[Dict[str, Any]]:
+    for pattern, cat in FALLBACK_RULES:
+        if pattern.search(text):
+            return build_decision(item, text, cat, 0.9)
+    return None
+
+
 def fallback_decision(item: MemoItem, text: str) -> Dict[str, Any]:
     category, confidence = DEFAULT_CATEGORY, 0.6  # below Go's heuristics, so Go keeps its answer
     for pattern, cat in FALLBACK_RULES:
@@ -263,6 +300,8 @@ def health():
     return {
         "status": "ok",
         "model": "laya-typed-decisions" if HAS_LAYA else "fallback-classifier",
+        "memo_model": memo_model is not None,
+        "memo_model_accuracy": round(memo_model.accuracy, 3) if memo_model else None,
         "engine": "Laya AI System 1 Decision Model",
         "is_native_laya": HAS_LAYA,
         "version": app.version,
@@ -288,19 +327,21 @@ def classify_batch(req: BatchRequest) -> Dict[str, Any]:
         key = DecisionCache.key(item, text)
 
         decision = memo_cache.get(key)
-        if decision is None:
-            if HAS_LAYA and router is not None:
+        if decision is not None:
+            decision = {**decision, "merchant": clean_title(text)}
+        else:
+            decision = rule_decision(item, text)
+            if decision is None:
+                decision = memo_model_decision(item, text)
+            if decision is None and HAS_LAYA and router is not None:
                 try:
                     decision = laya_decision(item, text)
                 except Exception as e:  # never fail the batch because one prediction broke
                     print(f"[LAYA-SIDECAR] predict failed, using fallback: {e}")
-                    decision = fallback_decision(item, text)
-            else:
+            if decision is None:
                 decision = fallback_decision(item, text)
             # Merchant names are per-memo text, so they are not cached
             memo_cache.put(key, {k: v for k, v in decision.items() if k != "merchant"})
-        else:
-            decision = {**decision, "merchant": clean_title(text)}
 
         results.append(DecisionResult(id=item.id, **decision))
 

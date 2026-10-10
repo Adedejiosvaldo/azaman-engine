@@ -246,6 +246,8 @@ func TestScorePeople(t *testing.T) {
 		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 5000, t0, false),
 		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 2000, t0.AddDate(0, 0, 9), false),
 		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 1000, t0.AddDate(0, 0, 12), true),
+		// Relative on Moniepoint with odd amounts: shares surname -> still definitively family, not review
+		p2p("KABIR BALOGUN", "Moniepoint", 1375, t0, false),
 		// Trader on OPay (not Moniepoint): odd amounts, one-way -> vendor
 		p2p("NGOZI AMAKA OBI", "OPay", 1050, t0, false),
 		p2p("NGOZI AMAKA OBI", "OPay", 3810, t0.AddDate(0, 0, 4), false),
@@ -258,8 +260,11 @@ func TestScorePeople(t *testing.T) {
 	if txs[0].Category != "Family & Favors" || txs[0].DecisionBasis != "person" {
 		t.Errorf("sibling should be family by person signals: %q / %q", txs[0].Category, txs[0].DecisionBasis)
 	}
-	if txs[3].Category != "Market & Small Vendors" || txs[3].Flags.IsUrgent2k {
-		t.Errorf("odd-amount one-way payee should be a vendor: %q", txs[3].Category)
+	if txs[3].Category != "Family & Favors" || txs[3].DecisionBasis != "person" {
+		t.Errorf("relative sharing surname should be definitively family: %q / %q", txs[3].Category, txs[3].DecisionBasis)
+	}
+	if txs[4].Category != "Market & Small Vendors" || txs[4].Flags.IsUrgent2k {
+		t.Errorf("odd-amount one-way payee should be a vendor: %q", txs[4].Category)
 	}
 	found := false
 	for _, r := range review {

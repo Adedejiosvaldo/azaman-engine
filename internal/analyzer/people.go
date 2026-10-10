@@ -116,8 +116,10 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		}
 		sized := p.round + p.odd // payments of ₦1,000+ whose roundness is meaningful
 		score, reasons := 0.0, []string{}
+		sharesSurname := false
 		if shared := sharedTokens(p.tokens, holder); len(shared) > 0 && len(shared) < len(p.tokens) {
 			score += 2.5
+			sharesSurname = true
 			reasons = append(reasons, "shares your name ("+strings.Title(strings.Join(shared, ", "))+")")
 		}
 		if p.receivedFrom {
@@ -147,6 +149,8 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 
 		guess := "unsure"
 		switch {
+		case sharesSurname:
+			guess = "family"
 		case score >= familyThreshold:
 			guess = "family"
 		case score <= vendorThreshold:
@@ -184,7 +188,7 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		}
 
 		// Ask the user about people the score can't settle, and weak guesses on undecided rows
-		if len(p.debitIdx) > 0 && (guess == "unsure" || math.Abs(score) < 2.5) {
+		if len(p.debitIdx) > 0 && !sharesSurname && (guess == "unsure" || math.Abs(score) < 2.5) {
 			if len(reasons) == 0 {
 				reasons = append(reasons, "no typed purpose and no strong signal")
 			}
