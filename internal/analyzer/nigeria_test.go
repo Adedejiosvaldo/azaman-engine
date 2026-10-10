@@ -295,3 +295,43 @@ func TestTotalLeakBurnCountsEachTransactionOnce(t *testing.T) {
 		t.Errorf("expected 16000 total leak burn, got %f", report.CashLeaks.TotalLeakBurn)
 	}
 }
+
+func TestSelfTransferNameVariants(t *testing.T) {
+	holder := nameTokens("JOSEPH ADEDEJI ADEWUNMI")
+	for _, name := range []string{"MR JOSEPH ADEWUNMI", "JOSEPHADEDEJI ADEWUNMI", "ADEWUNMI, ADEDEJI JOSEPH"} {
+		if !isSameName(holder, name) {
+			t.Errorf("%q should be the holder", name)
+		}
+	}
+	for _, name := range []string{"EUNICE IFEOLUWA ADEWUNMI", "MR ADEWUNMI"} {
+		if isSameName(holder, name) {
+			t.Errorf("%q is a relative, not the holder", name)
+		}
+	}
+}
+
+func TestMerchantCollectionAccountIsNotSelfTransfer(t *testing.T) {
+	now := time.Now()
+	txs := []models.DecodedTransaction{
+		debit("Transfer to SHUTTLERSMETR/JOSEPH ADEWUNMI | Wema Bank | 8000****11", 1500, now),
+		debit("NIP TRANSFER TO OPAY - JOSEPH ADEDEJI ADEWUNMI", 5000, now),
+	}
+	DetectSelfTransfers(txs, "JOSEPH ADEDEJI ADEWUNMI")
+	if txs[0].Flags.IsSelfTransfer {
+		t.Error("payment to Shuttlers' account in the holder's name is not a self transfer")
+	}
+	if !txs[1].Flags.IsSelfTransfer {
+		t.Error("transfer to the holder's own OPay account is a self transfer")
+	}
+}
+
+func TestOrganisationsLeftOutOfPeopleReview(t *testing.T) {
+	for _, name := range []string{"FCMB PUBLIC OFFER", "JUMIA PAY NGN", "BIGG JOSH SUPER STORE"} {
+		if !isOrganisation(name) {
+			t.Errorf("%q should be treated as an organisation", name)
+		}
+	}
+	if isOrganisation("OCHOWOCHE SOLOMON JONAH") {
+		t.Error("a person's name is not an organisation")
+	}
+}

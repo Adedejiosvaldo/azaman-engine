@@ -46,6 +46,10 @@ func cleanPurpose(p, counterparty string) string {
 			continue
 		case lower == "sent", lower == "transfer", lower == "trf", lower == "payment", lower == "nip":
 			continue
+		// OPay's preset purposes: "Purchase" is pre-selected and sent with transfers to savings apps
+		// and relatives alike, so neither says what the money was for.
+		case lower == "purchase", lower == "personal transfer":
+			continue
 		case strings.EqualFold(part, counterparty):
 			continue
 		}

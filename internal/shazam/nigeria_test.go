@@ -164,3 +164,30 @@ func TestKeywordsMatchWholeWords(t *testing.T) {
 		t.Errorf("'premium minimum' should not trigger Urgent 2k via 'mum'")
 	}
 }
+
+func TestPayeeAndPresetPurposes(t *testing.T) {
+	// OPay's preset "Purchase" says nothing; a savings app in the payee name decides the row
+	cowry := MatchAndDecode(models.RawTransaction{Description: "Transfer to COWRYWISE JOSEPH ADEWUNMI | Guaranty Trust Bank | 9000****45 | Purchase", Debit: 200000})
+	if !cowry.Flags.IsSavings {
+		t.Errorf("Cowrywise transfer should be savings, got %s / %s", cowry.Category, cowry.Classification)
+	}
+	piggy := MatchAndDecode(models.RawTransaction{Description: "Transfer to PIGGYVEST/ADEWUNMI JOSEPH | Wema Bank PLC | 7697****37 | Stocks", Debit: 5000})
+	if !piggy.Flags.IsSavings {
+		t.Errorf("Piggyvest transfer should be savings, got %s", piggy.Category)
+	}
+	preset := MatchAndDecode(models.RawTransaction{Description: "Transfer to OCHOWOCHE SOLOMON JONAH | OPay | 8160****45 | Purchase", Debit: 3000})
+	if preset.Purpose != "" || preset.DecisionBasis != "name" {
+		t.Errorf("preset 'Purchase' should be ignored, got purpose %q basis %q", preset.Purpose, preset.DecisionBasis)
+	}
+	week := MatchAndDecode(models.RawTransaction{Description: "Transfer to OCHOWOCHE SOLOMON JONAH | OPay | 8160****45 | For the week", Debit: 3000})
+	if week.Category != "Family & Favors" {
+		t.Errorf("'For the week' is an allowance, got %s", week.Category)
+	}
+}
+
+func TestFamilyCreditIsNotIncome(t *testing.T) {
+	d := MatchAndDecode(models.RawTransaction{Description: "Transfer from DANIEL ADEWUNMI | OPay | 8100****11 | feeding", Credit: 10000})
+	if d.Flags.IsIncome {
+		t.Errorf("money from family for feeding should not count as income")
+	}
+}

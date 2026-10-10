@@ -87,8 +87,9 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		decoded.Flags.IsSavings = rule.IsSavings
 		decoded.Flags.IsLoan = rule.IsLoan
 		decoded.Flags.IsSelfTransfer = rule.IsSelfTransfer
-		// Loan disbursements and savings withdrawals are cash in, but not income.
-		decoded.Flags.IsIncome = rule.IsIncome || (isCredit && !rule.IsLoan && !rule.IsSavings && !rule.IsSelfTransfer)
+		// Loan disbursements, savings withdrawals and money from family are cash in, but not income.
+		decoded.Flags.IsIncome = rule.IsIncome ||
+			(isCredit && !rule.IsLoan && !rule.IsSavings && !rule.IsSelfTransfer && rule.Category != "Family & Favors")
 		decoded.Flags.IsTaxDeductible = rule.IsTechVendor
 		decoded.Flags.IsBusiness = rule.IsTechVendor || (rule.IsIncome && isCredit)
 		if rule.IsLoan && isCredit {
@@ -170,6 +171,11 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 func selectRule(cleaned, counterparty, purpose string, isCredit bool) (rule *MerchantRule, basis string, purchaseGuess bool) {
 	if counterparty == "" {
 		return FindRuleByKeyword(cleaned), "", false
+	}
+	// Paying a known business ("PIGGYVEST/JOSEPH ADEWUNMI", "CHOWDECK/...") is decided by who was
+	// paid: a purpose typed to Piggyvest does not make it a purchase or a gift.
+	if r := FindNameRule(counterparty); r != nil && (r.IsSavings || r.Confidence >= 0.95) {
+		return r, "name", false
 	}
 	if purpose != "" {
 		if r := FindRuleByKeyword(CleanMemo(purpose)); r != nil {

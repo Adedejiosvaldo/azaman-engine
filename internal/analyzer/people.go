@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"azaman-engine/internal/models"
+	"azaman-engine/internal/shazam"
 )
 
 const (
@@ -54,7 +55,7 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 			continue
 		}
 		k := key(tx.Counterparty)
-		if k == "" {
+		if k == "" || isOrganisation(tx.Counterparty) {
 			continue
 		}
 		p := people[k]
@@ -64,6 +65,17 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		}
 		if tx.Credit > 0 {
 			p.receivedFrom = true
+			// Money from a relative is support, not earnings (it stays in inflow, but not in
+			// taxable income or the business split). Only name-guessed rows are relabelled.
+			if shared := sharedTokens(p.tokens, holder); len(shared) > 0 && len(shared) < len(p.tokens) &&
+				tx.DecisionBasis == "name" && tx.Flags.IsIncome {
+				txs[i].Category = "Family & Favors"
+				txs[i].Classification = "Family Support Received"
+				txs[i].Merchant = "Transfer from " + p.name
+				txs[i].Flags.IsIncome = false
+				txs[i].Flags.IsBusiness = false
+				txs[i].DecisionBasis = "person"
+			}
 			continue
 		}
 		if tx.Debit <= 0 {
@@ -188,6 +200,26 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		review = []models.PersonReview{}
 	}
 	return review
+}
+
+// orgWords mark a business or institution rather than a person.
+var orgWords = []string{"ltd", "limited", "plc", "offer", "pay", "payments", "network", "mfb", "bank",
+	"microfinance", "store", "stores", "supermarket", "ventures", "enterprise", "enterprises", "services",
+	"global", "nig", "company", "investment", "investments", "capital", "wallet", "foundation", "church"}
+
+// isOrganisation reports whether a counterparty is a business or institution. Those are never
+// family, so they are left out of person scoring and the "who's who" review.
+func isOrganisation(name string) bool {
+	if shazam.FindNameRule(name) != nil {
+		return true
+	}
+	lower := strings.ToLower(name)
+	for _, w := range orgWords {
+		if shazam.ContainsWord(lower, w) {
+			return true
+		}
+	}
+	return false
 }
 
 func sortedTokens(name string) []string {

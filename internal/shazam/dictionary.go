@@ -348,7 +348,7 @@ var MerchantRegistry = []MerchantRule{
 		Confidence:     0.98,
 	},
 	{
-		Patterns:       []string{"bamboo", "risevest", "trove", "chaka"},
+		Patterns:       []string{"bamboo", "risevest", "rise naira", "trove", "chaka"},
 		Merchant:       "Investment Portfolio",
 		Category:       "FinTech & Investments",
 		Classification: "Savings & Investment",
@@ -576,7 +576,8 @@ var MerchantRegistry = []MerchantRule{
 	{
 		Patterns: []string{"mum", "dad", "mama", "papa", "mummy", "daddy", "brother", "sister", "family", "house upkeep", "upkeep",
 			"feeding", "iya", "baba", "aunty", "uncle", "pikin", "my wife", "my husband", "black tax",
-			"allowance", "gift", "birthday", "sallah", "ileya", "xmas", "christmas", "hospital bill", "support", "assistance", "for you"},
+			"allowance", "gift", "birthday", "sallah", "ileya", "xmas", "christmas", "hospital bill", "support", "assistance", "for you",
+			"for the week", "weekly", "happy", "enjoy", "bday", "treatment"},
 		Merchant:       "Family Upkeep",
 		PurposeOnly:    true,
 		Category:       "Family & Favors",
