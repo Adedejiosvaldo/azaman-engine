@@ -218,6 +218,7 @@ type AuditReport struct {
 	Tax          TaxEstimate             `json:"tax_estimate"`
 	Business     BusinessSplit           `json:"business_split"`
 	PeopleReview []PersonReview          `json:"people_review"`
+	Check        StatementCheck          `json:"statement_check"`
 	Transactions []DecodedTransaction    `json:"transactions"`
 	BankDetected string                  `json:"bank_detected"`
 	AuditMeta    AuditMeta               `json:"audit_meta"`
@@ -232,4 +233,17 @@ type PersonReview struct {
 	Guess     string   `json:"guess"` // "family", "vendor" or "unsure"
 	Score     float64  `json:"score"` // > 0 leans family, < 0 leans vendor
 	Reasons   []string `json:"reasons"`
+}
+
+// StatementCheck compares what was parsed with the totals printed on the statement, so a misread
+// statement is reported instead of silently producing wrong numbers.
+type StatementCheck struct {
+	Checked      bool    `json:"checked"` // the statement prints totals the parse could be compared with
+	OK           bool    `json:"ok"`
+	StatedDebit  float64 `json:"stated_debit"`
+	StatedCredit float64 `json:"stated_credit"`
+	ParsedDebit  float64 `json:"parsed_debit"`
+	ParsedCredit float64 `json:"parsed_credit"`
+	StatedRows   int     `json:"stated_rows"`
+	ParsedRows   int     `json:"parsed_rows"`
 }

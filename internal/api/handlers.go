@@ -99,12 +99,13 @@ func HandleAudit(c *gin.Context) {
 	}
 
 	var rawTransactions []models.RawTransaction
+	var check models.StatementCheck
 
 	// 5. Route to appropriate ephemeral parser
 	switch fileExt {
 	case ".pdf":
 		var detectedBank string
-		rawTransactions, detectedBank, err = parser.ParsePDF(fileBytes, password, bankName)
+		rawTransactions, detectedBank, check, err = parser.ParsePDF(fileBytes, password, bankName)
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{
 				"error":   "PDF statement extraction failed: " + err.Error(),
@@ -266,6 +267,7 @@ func HandleAudit(c *gin.Context) {
 		startTime,
 		accountHolder,
 	)
+	audit.Check = check
 
 	// detail=summary drops per-transaction arrays (~95% smaller) for low-end phones and costly data.
 	if c.DefaultPostForm("detail", c.Query("detail")) == "summary" {

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"azaman-engine/internal/models"
 	"github.com/ledongthuc/pdf"
@@ -21,10 +22,10 @@ var (
 )
 
 // ParsePDF parses an encrypted or unencrypted bank statement PDF entirely in RAM.
-func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTransaction, detectedBank string, err error) {
+func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTransaction, detectedBank string, check models.StatementCheck, err error) {
 	detectedBank = bankName
 	if len(data) == 0 {
-		return nil, detectedBank, fmt.Errorf("empty PDF byte buffer")
+		return nil, detectedBank, check, fmt.Errorf("empty PDF byte buffer")
 	}
 
 	defer func() {
@@ -54,7 +55,7 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	}
 
 	if err != nil {
-		return nil, detectedBank, fmt.Errorf("failed to open PDF in memory: %w", err)
+		return nil, detectedBank, check, fmt.Errorf("failed to open PDF in memory: %w", err)
 	}
 
 	numPages := pdfReader.NumPage()
@@ -146,7 +147,7 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	}
 
 	if len(allLines) == 0 {
-		return nil, detectedBank, fmt.Errorf("this PDF contains no selectable text (it may be a scanned image or empty). Please upload an electronic PDF statement or CSV/Excel file")
+		return nil, detectedBank, check, fmt.Errorf("this PDF contains no selectable text (it may be a scanned image or empty). Please upload an electronic PDF statement or CSV/Excel file")
 	}
 
 	// Auto-detect bank from extracted text if not already determined
@@ -161,10 +162,10 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 
 	// Use specialized column-aware parser for OPay statements if detected
 	if detectedBank == BankOPay {
-		opayTxs := parseOPayPDFRows(pdfReader, detectedBank, defaultCurrency)
+		opayTxs, stated := parseOPayPDFRows(pdfReader, detectedBank, defaultCurrency)
 		opayRows = len(opayTxs)
 		if len(opayTxs) > 0 {
-			return opayTxs, detectedBank, nil
+			return opayTxs, detectedBank, CheckTotals(opayTxs, stated), nil
 		}
 	}
 
@@ -184,15 +185,15 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	}
 	if tableTxs := parseTablePDF(pageRunList, detectedBank, defaultCurrency); len(tableTxs) > 0 {
 		tableRows = len(tableTxs)
-		return tableTxs, detectedBank, nil
+		return tableTxs, detectedBank, check, nil
 	}
 
 	transactions := parseLinesToTransactions(allLines, detectedBank, defaultCurrency)
 	if len(transactions) == 0 {
-		return nil, detectedBank, fmt.Errorf("no transaction table rows could be identified in this PDF. Please verify this is an account statement with tabular dates and amounts")
+		return nil, detectedBank, check, fmt.Errorf("no transaction table rows could be identified in this PDF. Please verify this is an account statement with tabular dates and amounts")
 	}
 
-	return transactions, detectedBank, nil
+	return transactions, detectedBank, check, nil
 }
 
 // isPDFHeaderNoise checks whether a cell represents table header text rather than transaction data.
@@ -217,114 +218,265 @@ func isPDFHeaderNoise(s string) bool {
 		strings.Contains(lower, "page ")
 }
 
-// parseOPayPDFRows extracts transactions from OPay's multi-column tabular PDF layout.
-func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) []models.RawTransaction {
-	numPages := pdfReader.NumPage()
+// parseOPayPDFRows extracts transactions from OPay's tabular PDF layout. Column positions come
+// from the "Trans. Time ... Transaction Reference" header, so each value lands in its column.
+// Descriptions and references wrap above and below the date line, so each transaction owns the
+// rows between the midpoints to its neighbours. Only the first account section (the wallet) is
+// read: the OWealth "Savings Account" section that follows has its own layout, and its movements
+// already appear in the wallet as "Auto-save to OWealth" / "OWealth Withdrawal".
+func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]models.RawTransaction, *models.StatementCheck) {
 	var results []models.RawTransaction
-	months := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+	var stated *models.StatementCheck
+	var cols []opayColumn
+	sections := 0
 
-	for p := 1; p <= numPages; p++ {
+	for p := 1; p <= pdfReader.NumPage(); p++ {
 		page := pdfReader.Page(p)
 		if page.V.IsNull() {
 			continue
 		}
-
 		rows, err := page.GetTextByRow()
 		if err != nil || len(rows) == 0 {
 			continue
 		}
+		sort.Slice(rows, func(i, j int) bool { return rows[i].Position > rows[j].Position })
 
-		sort.Slice(rows, func(i, j int) bool {
-			return rows[i].Position > rows[j].Position
-		})
-
-		var txRows []int
+		var body pdf.Rows
 		for i, r := range rows {
-			if (p == 1 && r.Position > 450) || (p > 1 && r.Position > 600) {
+			text := rowString(r)
+			if strings.Contains(text, "Opening Balance") {
+				sections++
+				if sections > 1 {
+					break // next account section
+				}
+			}
+			if stated == nil && strings.Contains(text, "Total Debit") && i+3 < len(rows) {
+				stated = opayStatedTotals(rows[i : i+4])
+			}
+			if strings.Contains(text, "Trans. Time") {
+				cols = opayColumns(rows, i)
+				body = body[:0]
 				continue
 			}
-			for _, cell := range r.Content {
-				if cell.X >= 60 && cell.X <= 85 {
-					txt := strings.TrimSpace(cell.S)
-					if len(txt) >= 10 {
-						hasMonth := false
-						for _, m := range months {
-							if strings.Contains(txt, m) {
-								hasMonth = true
-								break
-							}
-						}
-						if hasMonth {
-							txRows = append(txRows, i)
-							break
-						}
+			if cols != nil {
+				body = append(body, r)
+			}
+		}
+		if cols == nil {
+			continue // cover rows before the table header
+		}
+
+		var dateRows []int
+		for i, r := range body {
+			for _, c := range r.Content {
+				if opayColumnAt(cols, c.X) == colTransDate {
+					if _, ok := ParseDate(strings.TrimSpace(c.S)); ok {
+						dateRows = append(dateRows, i)
 					}
+					break
 				}
 			}
 		}
 
-		for idx, rowIdx := range txRows {
-			datePos := float64(rows[rowIdx].Position)
-			var tx models.RawTransaction
-			tx.Bank = detectedBank
-			tx.Currency = currency
-
-			upperY := 100000.0
-			if idx > 0 {
-				prevPos := float64(rows[txRows[idx-1]].Position)
-				upperY = (datePos + prevPos) / 2.0
+		for k, ri := range dateRows {
+			y := float64(body[ri].Position)
+			upper, lower := math.Inf(1), math.Inf(-1)
+			if k > 0 {
+				upper = (y + float64(body[dateRows[k-1]].Position)) / 2
 			}
-			lowerY := -1.0
-			if idx+1 < len(txRows) {
-				nextPos := float64(rows[txRows[idx+1]].Position)
-				lowerY = (datePos + nextPos) / 2.0
+			if k+1 < len(dateRows) {
+				lower = (y + float64(body[dateRows[k+1]].Position)) / 2
 			}
 
-			var descLines []string
-
-			for _, r := range rows {
-				rPos := float64(r.Position)
-				if rPos > upperY || rPos <= lowerY {
+			tx := models.RawTransaction{Bank: detectedBank, Currency: currency}
+			var desc, refs []string
+			for _, r := range body {
+				if pos := float64(r.Position); pos > upper || pos <= lower {
 					continue
 				}
-				if (p == 1 && r.Position > 450) || (p > 1 && r.Position > 600) {
-					continue
-				}
-
-				for _, cell := range r.Content {
-					txt := strings.TrimSpace(cell.S)
-					if isPDFHeaderNoise(txt) || txt == "" {
+				for _, c := range r.Content {
+					txt := strings.TrimSpace(c.S)
+					if txt == "" {
 						continue
 					}
-
-					if cell.X >= 60 && cell.X <= 85 && tx.Date == "" {
-						tx.Date = txt
-					} else if cell.X >= 160 && cell.X <= 280 {
-						descLines = append(descLines, txt)
-					} else if cell.X >= 295 && cell.X <= 335 && tx.Debit == 0 {
+					switch opayColumnAt(cols, c.X) {
+					case colTransDate:
+						if tx.Date == "" {
+							tx.Date = txt
+						}
+					case colRemarks:
+						desc = append(desc, txt)
+					case colDebit:
 						tx.Debit = ParseAmount(txt)
-					} else if cell.X >= 335 && cell.X <= 375 && tx.Credit == 0 {
+					case colCredit:
 						tx.Credit = ParseAmount(txt)
-					} else if cell.X >= 375 && cell.X <= 415 && tx.Balance == 0 {
+					case colBalance:
 						tx.Balance = ParseAmount(txt)
-					} else if cell.X >= 460 && tx.Reference == "" {
-						tx.Reference = txt
+					case colReference:
+						refs = append(refs, txt)
 					}
 				}
 			}
 
-			tx.Description = strings.Join(descLines, " ")
+			tx.Description = strings.Join(strings.Fields(strings.Join(desc, " ")), " ")
+			tx.Reference = strings.Join(refs, "")
 			tx.ParsedDate, _ = ParseDate(tx.Date)
 			tx.RawLine = fmt.Sprintf("%s | %s | Debit: %.2f | Credit: %.2f | Bal: %.2f",
 				tx.Date, tx.Description, tx.Debit, tx.Credit, tx.Balance)
-
-			if tx.Debit > 0 || tx.Credit > 0 || tx.Description != "" {
-				results = append(results, tx)
-			}
+			results = append(results, tx)
+		}
+		if sections > 1 {
+			break
 		}
 	}
 
-	return results
+	fillCardFundedTransfers(results)
+	return results, stated
+}
+
+// opayStatedTotals reads the summary block under the wallet heading:
+//
+//	Opening Balance   Total Debit      Debit Count
+//	₦ 0.00            ₦ 20,224,221.88  4404
+//	Closing Balance   Total Credit     Credit Count
+//	₦ 0.00            ₦ 20,224,221.88  3755
+//
+// Values sit under their labels, so each is the amount on the next row nearest the label's x.
+func opayStatedTotals(rows pdf.Rows) *models.StatementCheck {
+	valueUnder := func(label string) (float64, bool) {
+		for i := 0; i+1 < len(rows); i++ {
+			for _, c := range rows[i].Content {
+				if !strings.HasPrefix(strings.TrimSpace(c.S), label) {
+					continue
+				}
+				best, found := 0.0, false
+				dist := math.Inf(1)
+				for _, v := range rows[i+1].Content {
+					s := strings.TrimSpace(v.S)
+					if s == "" || s == "₦" {
+						continue
+					}
+					if d := math.Abs(v.X - c.X); d < dist && d < 40 {
+						dist, best, found = d, ParseAmount(s), true
+					}
+				}
+				return best, found
+			}
+		}
+		return 0, false
+	}
+	debit, ok1 := valueUnder("Total Debit")
+	credit, ok2 := valueUnder("Total Credit")
+	nd, ok3 := valueUnder("Debit Count")
+	nc, ok4 := valueUnder("Credit Count")
+	if !(ok1 && ok2) {
+		return nil
+	}
+	check := &models.StatementCheck{StatedDebit: debit, StatedCredit: credit}
+	if ok3 && ok4 {
+		check.StatedRows = int(nd + nc)
+	}
+	return check
+}
+
+// CheckTotals compares parsed transactions with the statement's printed totals. Amounts may differ
+// by up to 0.5% (card-funded transfers carry the top-up amount, which can include a card fee).
+func CheckTotals(txs []models.RawTransaction, stated *models.StatementCheck) models.StatementCheck {
+	if stated == nil {
+		return models.StatementCheck{}
+	}
+	check := *stated
+	check.Checked = true
+	check.ParsedRows = len(txs)
+	for _, tx := range txs {
+		check.ParsedDebit += tx.Debit
+		check.ParsedCredit += tx.Credit
+	}
+	check.ParsedDebit = math.Round(check.ParsedDebit*100) / 100
+	check.ParsedCredit = math.Round(check.ParsedCredit*100) / 100
+	close := func(parsed, stated float64) bool {
+		return math.Abs(parsed-stated) <= math.Max(1, stated*0.005)
+	}
+	check.OK = close(check.ParsedDebit, check.StatedDebit) && close(check.ParsedCredit, check.StatedCredit) &&
+		(check.StatedRows == 0 || check.StatedRows == check.ParsedRows)
+	return check
+}
+
+// fillCardFundedTransfers recovers amounts OPay leaves at 0.00: a transfer paid straight from a
+// bank card shows no debit, and the card charge appears seconds later as an "Add Money-Bank Card"
+// credit. That credit is the best available amount for the transfer (it can include a card fee).
+func fillCardFundedTransfers(txs []models.RawTransaction) {
+	for i := 0; i+1 < len(txs); i++ {
+		tx, next := &txs[i], txs[i+1]
+		if tx.Debit != 0 || tx.Credit != 0 || next.Credit <= 0 ||
+			!strings.HasPrefix(strings.ToLower(next.Description), "add money") {
+			continue
+		}
+		if gap := next.ParsedDate.Sub(tx.ParsedDate); gap < 0 || gap > 2*time.Minute {
+			continue
+		}
+		tx.Debit = next.Credit
+		tx.RawLine = fmt.Sprintf("%s | %s | Debit: %.2f | Credit: %.2f | Bal: %.2f",
+			tx.Date, tx.Description, tx.Debit, tx.Credit, tx.Balance)
+	}
+}
+
+type opayColumn struct {
+	kind string
+	x    float64 // left edge of the header label; values are left-aligned under it
+}
+
+// opayColumns reads column positions from the header row at index h. "Balance After (₦)" is
+// drawn on the lines just above and below the header, so nearby rows are searched for it.
+func opayColumns(rows pdf.Rows, h int) []opayColumn {
+	var cols []opayColumn
+	add := func(kind string, x float64) { cols = append(cols, opayColumn{kind, x}) }
+	for i := h - 1; i <= h+1; i++ {
+		if i < 0 || i >= len(rows) {
+			continue
+		}
+		for _, c := range rows[i].Content {
+			switch s := strings.TrimSpace(c.S); {
+			case strings.HasPrefix(s, "Trans. Time"):
+				add(colTransDate, c.X)
+			case strings.HasPrefix(s, "Value Date"):
+				add(colValueDate, c.X)
+			case strings.HasPrefix(s, "Description"):
+				add(colRemarks, c.X)
+			case strings.HasPrefix(s, "Debit"):
+				add(colDebit, c.X)
+			case strings.HasPrefix(s, "Credit"):
+				add(colCredit, c.X)
+			case strings.HasPrefix(s, "Balance"):
+				add(colBalance, c.X)
+			case strings.HasPrefix(s, "Channel"):
+				add(colBranch, c.X)
+			case strings.HasPrefix(s, "Transaction Reference"):
+				add(colReference, c.X)
+			}
+		}
+	}
+	sort.Slice(cols, func(i, j int) bool { return cols[i].x < cols[j].x })
+	return cols
+}
+
+// opayColumnAt returns the column whose header starts at or just left of x.
+func opayColumnAt(cols []opayColumn, x float64) string {
+	kind := ""
+	for _, c := range cols {
+		if x+2 >= c.x {
+			kind = c.kind
+		}
+	}
+	return kind
+}
+
+func rowString(r *pdf.Row) string {
+	var parts []string
+	for _, c := range r.Content {
+		parts = append(parts, c.S)
+	}
+	return strings.Join(parts, " ")
 }
 
 // parseLinesToTransactions groups consecutive text lines into discrete transactions.

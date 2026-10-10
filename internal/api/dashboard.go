@@ -266,6 +266,9 @@ func HandleDashboard(c *gin.Context) {
     <div id="spinner"></div>
 
     <div id="results" class="hidden">
+      <div class="internal-card hidden" id="check-card" style="border-color: var(--red);">
+        <div class="kpi-sub" id="check-summary"></div>
+      </div>
       <div class="kpis">
         <div class="kpi-card">
           <div class="kpi-label">Total Inflow</div>
@@ -495,6 +498,15 @@ func HandleDashboard(c *gin.Context) {
 
     function renderAudit(report, clientLatency) {
       document.getElementById('results').classList.remove('hidden');
+
+      // Statement check: warn when parsed totals disagree with the totals printed on the statement
+      const chk = report.statement_check || {};
+      document.getElementById('check-card').classList.toggle('hidden', !chk.checked || chk.ok);
+      document.getElementById('check-summary').textContent = chk.checked && !chk.ok
+        ? '⚠️ This statement may not have been read fully: read ' + chk.parsed_rows + ' of ' + chk.stated_rows +
+          ' rows, debits ' + fmtNaira(chk.parsed_debit) + ' vs ' + fmtNaira(chk.stated_debit) +
+          ', credits ' + fmtNaira(chk.parsed_credit) + ' vs ' + fmtNaira(chk.stated_credit) + '. Treat the numbers below with care.'
+        : '';
 
       const s = report.summary;
       document.getElementById('inflow').textContent = fmtNaira(s.total_inflow);
