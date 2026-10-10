@@ -282,3 +282,16 @@ func TestPaymentLabelOverridesPerson(t *testing.T) {
 		t.Errorf("per-payment label must beat the person label: %q / %q", txs[0].Category, txs[0].DecisionBasis)
 	}
 }
+
+func TestTotalLeakBurnCountsEachTransactionOnce(t *testing.T) {
+	now := time.Now()
+	mk := func(id string, at time.Time) models.DecodedTransaction {
+		return models.DecodedTransaction{ID: id, Merchant: "Chowdeck Delivery", Amount: -8000, Debit: 8000, ParsedDate: at,
+			Flags: models.TransactionFlags{IsMidnightLeak: true}}
+	}
+	txs := []models.DecodedTransaction{mk("a", now), mk("b", now.Add(5*time.Minute))}
+	report := GenerateAudit(txs, "Test", "s", "csv", 0, now, "")
+	if report.CashLeaks.TotalLeakBurn != 16000 {
+		t.Errorf("expected 16000 total leak burn, got %f", report.CashLeaks.TotalLeakBurn)
+	}
+}

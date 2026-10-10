@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"azaman-engine/internal/models"
+	"azaman-engine/internal/shazam"
 )
 
 var (
@@ -229,7 +230,7 @@ func DetectRecurring(txs []models.DecodedTransaction) []models.RecurringPayment 
 			kind, category = "Ajo / Thrift", "Ajo & Thrift"
 		case txs[idxs[0]].Category == "Rent & Housing":
 			kind, category = "Rent", "Rent & Housing"
-		case containsAny(lower, familyKeywords) || txs[idxs[0]].Category == "Family & Favors":
+		case containsAnyWord(lower, familyKeywords) || txs[idxs[0]].Category == "Family & Favors":
 			kind, category = "Black Tax (Family Support)", "Black Tax (Family Support)"
 		}
 
@@ -319,6 +320,16 @@ func chronological(txs []models.DecodedTransaction) []int {
 func containsAny(s string, keywords []string) bool {
 	for _, k := range keywords {
 		if strings.Contains(s, k) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsAnyWord is containsAny with word boundaries, for short keywords like "mum" or "iya".
+func containsAnyWord(s string, keywords []string) bool {
+	for _, k := range keywords {
+		if shazam.ContainsWord(s, k) {
 			return true
 		}
 	}

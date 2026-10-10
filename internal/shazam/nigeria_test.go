@@ -150,3 +150,17 @@ func TestSmallTransferIsNotLabelledUrgent2k(t *testing.T) {
 		t.Errorf("₦350 is below the Urgent 2k range, got %q", d.Classification)
 	}
 }
+
+func TestKeywordsMatchWholeWords(t *testing.T) {
+	for _, memo := range []string{"Lagos taxi ride", "Airtime recharge"} {
+		if d := MatchAndDecode(models.RawTransaction{Description: memo, Debit: 20000}); d.Flags.IsBankFee {
+			t.Errorf("%q wrongly flagged as a bank fee", memo)
+		}
+	}
+	if d := MatchAndDecode(models.RawTransaction{Description: "Stamp duty", Debit: 50}); !d.Flags.IsBankFee {
+		t.Errorf("stamp duty should be a bank fee, got %s", d.Category)
+	}
+	if d := MatchAndDecode(models.RawTransaction{Description: "Premium minimum order", Debit: 5000}); d.Flags.IsUrgent2k {
+		t.Errorf("'premium minimum' should not trigger Urgent 2k via 'mum'")
+	}
+}

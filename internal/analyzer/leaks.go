@@ -73,7 +73,22 @@ func GenerateAudit(
 	businessSplit := AnalyzeBusinessSplit(enrichedTxs)
 
 	// 5. Total leak burn & percentage
-	totalLeakBurn := midnightReport.TotalAmount + urgent2kReport.TotalAmount + duplicateReport.TotalPotentialRefund + bankChargesReport.TotalCharges
+	// A transaction can appear in several leak reports; count each one only once.
+	leakByTx := make(map[string]float64)
+	for _, list := range [][]models.DecodedTransaction{midnightReport.Transactions, urgent2kReport.Transactions, bankChargesReport.Transactions} {
+		for _, tx := range list {
+			leakByTx[tx.ID] = math.Abs(tx.Amount)
+		}
+	}
+	for _, pair := range duplicateReport.Pairs {
+		for _, tx := range pair.Transactions[1:] {
+			leakByTx[tx.ID] = math.Abs(tx.Amount)
+		}
+	}
+	var totalLeakBurn float64
+	for _, amt := range leakByTx {
+		totalLeakBurn += amt
+	}
 	var totalLeakPct float64
 	if summary.TotalOutflow > 0 {
 		totalLeakPct = (totalLeakBurn / summary.TotalOutflow) * 100.0

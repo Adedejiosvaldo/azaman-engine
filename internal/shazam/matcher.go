@@ -146,7 +146,7 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 			strings.Contains(lowerDesc, "nip/dr") ||
 			strings.Contains(lowerClean, "favors") ||
 			strings.Contains(lowerClean, "upkeep") ||
-			strings.Contains(lowerClean, "mum") ||
+			ContainsWord(lowerClean, "mum") ||
 			strings.Contains(lowerClean, "family"))) {
 			decoded.Flags.IsUrgent2k = true
 			decoded.Classification = "Micro-Transfer (Urgent 2k)"
@@ -202,9 +202,7 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 	}
 
 	// Bank charge heuristic
-	if strings.Contains(lowerClean, "fee") || strings.Contains(lowerClean, "charge") ||
-		strings.Contains(lowerClean, "duty") || strings.Contains(lowerClean, "tax") ||
-		strings.Contains(lowerClean, "levy") || strings.Contains(lowerClean, "vat") {
+	if containsAnyWord(lowerClean, "fee", "fees", "charge", "charges", "duty", "tax", "levy", "vat") {
 		d.Merchant = "Bank Fee / Surcharge"
 		d.Category = "Bank Fees & Charges"
 		d.Classification = "Bank Charge"
@@ -312,4 +310,13 @@ func titleCase(s string) string {
 		}
 	}
 	return strings.Join(words, " ")
+}
+
+func containsAnyWord(lower string, words ...string) bool {
+	for _, w := range words {
+		if ContainsWord(lower, w) {
+			return true
+		}
+	}
+	return false
 }

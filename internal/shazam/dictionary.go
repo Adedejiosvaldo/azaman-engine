@@ -623,13 +623,19 @@ func matchPattern(lower, pattern string) bool {
 	if len(pattern) > 4 {
 		return strings.Contains(lower, pattern)
 	}
+	return ContainsWord(lower, pattern)
+}
+
+// ContainsWord reports whether lowercase text contains word (or phrase) with word boundaries
+// on both sides, so "tax" does not match "taxi" and "mum" does not match "minimum".
+func ContainsWord(lower, word string) bool {
 	for start := 0; start < len(lower); {
-		idx := strings.Index(lower[start:], pattern)
+		idx := strings.Index(lower[start:], word)
 		if idx < 0 {
 			return false
 		}
 		idx += start
-		end := idx + len(pattern)
+		end := idx + len(word)
 		if (idx == 0 || !isWordChar(lower[idx-1])) && (end == len(lower) || !isWordChar(lower[end])) {
 			return true
 		}

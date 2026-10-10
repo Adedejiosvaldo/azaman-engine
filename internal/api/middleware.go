@@ -28,10 +28,12 @@ func SetupCORS() gin.HandlerFunc {
 		AllowOriginFunc: func(origin string) bool {
 			return len(allowed) == 0 || allowed[origin]
 		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Session-ID"},
-		ExposeHeaders:    []string{"Content-Length", "X-Session-ID", "X-Response-Time"},
-		AllowCredentials: true,
+		AllowMethods:  []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:  []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Session-ID"},
+		ExposeHeaders: []string{"Content-Length", "X-Session-ID", "X-Response-Time"},
+		// Credentials only for an explicit allowlist: reflecting any origin with credentials
+		// would let every website make authenticated requests.
+		AllowCredentials: len(allowed) > 0,
 		MaxAge:           12 * time.Hour,
 	}
 	return cors.New(config)

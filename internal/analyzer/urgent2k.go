@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"azaman-engine/internal/models"
+	"azaman-engine/internal/shazam"
 )
 
 // AnalyzeUrgent2k clusters micro-transfers (₦1,000 - ₦15,000) sent to individuals/favors.
@@ -27,7 +28,7 @@ func AnalyzeUrgent2k(txs []models.DecodedTransaction, periodDays float64) models
 			lowerMemo := strings.ToLower(tx.RawDescription + " " + tx.CleanMemo + " " + tx.Merchant)
 			isFamily := false
 			for _, kw := range familyKeywords {
-				if strings.Contains(lowerMemo, kw) {
+				if shazam.ContainsWord(lowerMemo, kw) {
 					isFamily = true
 					break
 				}
