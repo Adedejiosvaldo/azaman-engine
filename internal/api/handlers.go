@@ -380,8 +380,11 @@ func compactReport(r *models.AuditReport) {
 }
 
 // layaEligible reports whether a transaction may be sent to, or reclassified by, the Laya sidecar.
+// A transfer to a person with no typed purpose is left to person scoring: Laya reads memo text,
+// and a bare name gives it nothing to go on (it guesses bills, loans or even betting).
 func layaEligible(tx models.DecodedTransaction) bool {
-	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan && !tx.Flags.IsSelfTransfer
+	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan && !tx.Flags.IsSelfTransfer &&
+		(tx.Counterparty == "" || tx.Purpose != "")
 }
 
 // knownHour returns the transaction's hour of day, or nil for date-only rows (parsed as 00:00:00).
