@@ -10,3 +10,4 @@ testdata/
 *.md
 .air.toml
 .claude/
+**/.venv
