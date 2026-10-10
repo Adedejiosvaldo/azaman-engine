@@ -335,3 +335,36 @@ func TestOrganisationsLeftOutOfPeopleReview(t *testing.T) {
 		t.Error("a person's name is not an organisation")
 	}
 }
+
+func TestDuplicatesNeedMinutesNotHours(t *testing.T) {
+	day := time.Date(2025, 2, 22, 7, 23, 0, 0, time.UTC)
+	txs := []models.DecodedTransaction{
+		debit("Mobile Data | Glo", 270, day),
+		debit("Mobile Data | Glo", 270, day.Add(3*time.Hour)), // same plan bought again later
+		debit("Mobile Data | Glo", 270, day.Add(3*time.Hour+2*time.Minute)),
+	}
+	report, _ := AnalyzeDuplicates(txs)
+	if report.Count != 1 {
+		t.Errorf("only the purchase two minutes after another is a likely double charge, got %d", report.Count)
+	}
+}
+
+func TestUnsurePersonIsNotUrgent2kLeak(t *testing.T) {
+	now := time.Now()
+	var txs []models.DecodedTransaction
+	for i, amt := range []float64{3000, 5000} { // round amounts only: +1, below the family threshold
+		tx := debit("Transfer to OCHOWOCHE SOLOMON JONAH | OPay | 8160****45", amt, now.Add(time.Duration(i)*time.Hour))
+		tx.Counterparty, tx.DecisionBasis, tx.Category, tx.Confidence = "OCHOWOCHE SOLOMON JONAH", "name", "Family & Favors", 0.8
+		tx.Flags.IsUrgent2k = true
+		txs = append(txs, tx)
+	}
+	review := ScorePeople(txs, "JOSEPH ADEDEJI ADEWUNMI")
+	if len(review) != 1 || review[0].Guess != "unsure" {
+		t.Fatalf("expected one unsure review, got %+v", review)
+	}
+	for _, tx := range txs {
+		if tx.Flags.IsUrgent2k {
+			t.Error("payments to an unsure person should not count as Urgent 2k")
+		}
+	}
+}

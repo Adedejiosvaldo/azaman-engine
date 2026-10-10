@@ -234,6 +234,9 @@ def build_decision(item: MemoItem, text: str, category: str, confidence: float,
     }
 
 
+LAYA_CONFIDENCE_SCALE = 0.7
+
+
 def laya_decision(item: MemoItem, text: str) -> Dict[str, Any]:
     state = {"body": text, "amount": item.amount, "currency": item.currency,
              "direction": "credit" if item.is_credit else "debit"}
@@ -244,7 +247,9 @@ def laya_decision(item: MemoItem, text: str) -> Dict[str, Any]:
     return build_decision(
         item, text,
         category=answers.get("category", {}).get("choice", DEFAULT_CATEGORY),
-        confidence=answers.get("category", {}).get("answer_confidence", 0.9),
+        # The model is overconfident on Nigerian transfer memos ("Curtains" -> Ajo at 1.0), so its
+        # score is scaled below every Go rule and heuristic: Laya fills gaps, it does not overrule.
+        confidence=min(answers.get("category", {}).get("confidence", 0.0), 1.0) * LAYA_CONFIDENCE_SCALE,
         leak_prob=answers.get("is_silent_leak", {}).get("noul", 0.0),
         u2k_prob=answers.get("is_urgent_2k", {}).get("noul", 0.0),
         tax_prob=answers.get("is_tax_deductible", {}).get("noul", 0.0),

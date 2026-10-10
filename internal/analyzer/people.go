@@ -173,6 +173,13 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 				}
 				tx.Confidence = 0.85
 				tx.DecisionBasis = "person"
+			default:
+				// Unsure whether this is support or payment for goods: not counted as an
+				// "Urgent 2k" leak until the user labels the person in the review.
+				if tx.Flags.IsUrgent2k {
+					tx.Flags.IsUrgent2k = false
+					tx.Classification = "Personal Transfer"
+				}
 			}
 		}
 

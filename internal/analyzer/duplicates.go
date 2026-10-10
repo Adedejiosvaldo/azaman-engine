@@ -9,6 +9,14 @@ import (
 	"azaman-engine/internal/models"
 )
 
+// duplicateWindow is how close two identical timed debits must be to look like a double charge.
+const duplicateWindow = 10 * time.Minute
+
+// hasTimeOfDay is false for date-only rows, which parse to exactly 00:00:00.
+func hasTimeOfDay(t time.Time) bool {
+	return !t.IsZero() && (t.Hour() != 0 || t.Minute() != 0 || t.Second() != 0)
+}
+
 // AnalyzeDuplicates identifies potential duplicate charges (identical amount & vendor within short window).
 func AnalyzeDuplicates(txs []models.DecodedTransaction) (models.DuplicateDebitsReport, []models.DecodedTransaction) {
 	report := models.DuplicateDebitsReport{
@@ -67,18 +75,19 @@ func AnalyzeDuplicates(txs []models.DecodedTransaction) (models.DuplicateDebitsR
 				continue
 			}
 
-			// Must be within 24 hours or same calendar day
+			// A double charge lands within minutes. With times of day, repeat purchases hours apart
+			// (the same data plan every morning) are not duplicates; date-only rows need the same day.
 			isTimeClose := false
-			if !itemA.tx.ParsedDate.IsZero() && !itemB.tx.ParsedDate.IsZero() {
+			if hasTimeOfDay(itemA.tx.ParsedDate) && hasTimeOfDay(itemB.tx.ParsedDate) {
 				diff := itemB.tx.ParsedDate.Sub(itemA.tx.ParsedDate)
 				if diff < 0 {
 					diff = -diff
 				}
-				if diff <= 24*time.Hour {
-					isTimeClose = true
-				}
-			} else if itemA.tx.Date == itemB.tx.Date && itemA.tx.Date != "" {
-				isTimeClose = true
+				isTimeClose = diff <= duplicateWindow
+			} else if !itemA.tx.ParsedDate.IsZero() && !itemB.tx.ParsedDate.IsZero() {
+				isTimeClose = itemA.tx.ParsedDate.Format("2006-01-02") == itemB.tx.ParsedDate.Format("2006-01-02")
+			} else {
+				isTimeClose = itemA.tx.Date == itemB.tx.Date && itemA.tx.Date != ""
 			}
 
 			if isTimeClose {
