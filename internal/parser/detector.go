@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"regexp"
 	"strings"
 )
 
@@ -11,49 +12,118 @@ const (
 	BankAccess     = "Access Bank"
 	BankMoniepoint = "Moniepoint"
 	BankOPay       = "OPay"
+	BankPalmPay    = "PalmPay"
+	BankZenith     = "Zenith Bank"
+	BankFirstBank  = "First Bank"
+	BankUBA        = "UBA"
+	BankWema       = "Wema Bank (ALAT)"
+	BankFidelity   = "Fidelity Bank"
+	BankSterling   = "Sterling Bank"
+	BankFCMB       = "FCMB"
+	BankStanbic    = "Stanbic IBTC"
 	BankGeegpay    = "Geegpay USD"
 	BankGeneric    = "Generic Bank"
 )
 
+// bankSignatures is checked in order. Every statement lists counterparties' banks in its narrations
+// ("Transfer to X | OPay"), so specific issuer names come before generic brand words.
+var bankSignatures = []struct {
+	bank     string
+	keywords []string
+}{
+	{BankGeegpay, []string{"geegpay technologies", "geegpay", "usd wallet"}},
+	{BankOPay, []string{"opay digital", "wallet account statement", "owealth", "opay"}},
+	{BankPalmPay, []string{"palmpay limited", "palmpay"}},
+	{BankKuda, []string{"kuda microfinance", "kuda bank", "money app for peace of mind", "kudabank"}},
+	{BankMoniepoint, []string{"moniepoint microfinance", "moniepoint mfb", "moniepoint"}},
+	{BankGTB, []string{"guaranty trust", "gtbank", "gtco"}},
+	{BankZenith, []string{"zenith bank", "zenithbank"}},
+	{BankFirstBank, []string{"first bank of nigeria", "firstbank", "first bank"}},
+	{BankUBA, []string{"united bank for africa", "uba plc", "ubagroup"}},
+	{BankAccess, []string{"access bank plc", "access bank", "accessbank"}},
+	{BankWema, []string{"wema bank", "alat by wema", "alat"}},
+	{BankFidelity, []string{"fidelity bank", "fidelitybank"}},
+	{BankSterling, []string{"sterling bank", "sterling financial"}},
+	{BankFCMB, []string{"first city monument", "fcmb"}},
+	{BankStanbic, []string{"stanbic ibtc", "stanbic"}},
+}
+
+// headerWindow is the leading slice of the statement that holds the issuer's letterhead.
+const headerWindow = 600
+
 // DetectBank inspects the raw text content of a statement (first 4KB - 16KB) to determine bank source.
+// The letterhead is checked first so counterparty bank names in narrations do not win.
 func DetectBank(sampleText string) string {
 	lower := strings.ToLower(sampleText)
-
-	// Check OPay
-	if strings.Contains(lower, "opay") || strings.Contains(lower, "owealth") ||
-		strings.Contains(lower, "wallet account statement") {
-		return BankOPay
+	header := lower
+	if len(header) > headerWindow {
+		header = header[:headerWindow]
 	}
 
-	// Check GTBank
-	if strings.Contains(lower, "guaranty trust") || strings.Contains(lower, "gtbank") || strings.Contains(lower, "gtco") ||
-		(strings.Contains(lower, "trans date") && strings.Contains(lower, "remarks") && strings.Contains(lower, "reference")) {
+	// Letterhead: the bank named first wins (narrations mention other banks further down).
+	best, bestPos := "", len(header)+1
+	for _, sig := range bankSignatures {
+		for _, kw := range sig.keywords {
+			if pos := strings.Index(header, kw); pos >= 0 && pos < bestPos {
+				best, bestPos = sig.bank, pos
+			}
+		}
+	}
+	if best != "" {
+		return best
+	}
+
+	for _, sig := range bankSignatures {
+		for _, kw := range sig.keywords {
+			if strings.Contains(lower, kw) {
+				return sig.bank
+			}
+		}
+	}
+
+	// GTBank CSV exports have no letterhead but a distinctive column set
+	if strings.Contains(lower, "trans date") && strings.Contains(lower, "remarks") && strings.Contains(lower, "reference") {
 		return BankGTB
 	}
-
-	// Check Kuda
-	if strings.Contains(lower, "kuda microfinance") || strings.Contains(lower, "kuda bank") ||
-		strings.Contains(lower, "money app for peace of mind") || strings.Contains(lower, "kudabank") {
-		return BankKuda
-	}
-
-	// Check Moniepoint
-	if strings.Contains(lower, "moniepoint mfb") || strings.Contains(lower, "moniepoint microfinance") ||
-		strings.Contains(lower, "moniepoint") {
-		return BankMoniepoint
-	}
-
-	// Check Geegpay
-	if strings.Contains(lower, "geegpay") || strings.Contains(lower, "usd wallet") ||
-		strings.Contains(lower, "geegpay technologies") {
-		return BankGeegpay
-	}
-
-	// Check Access Bank
-	if strings.Contains(lower, "access bank") || strings.Contains(lower, "access bank plc") ||
-		strings.Contains(lower, "accessbank") {
-		return BankAccess
-	}
-
 	return BankGeneric
+}
+
+var accountHolderRe = regexp.MustCompile(`(?im)^[\s"]*(?:account\s*name|account\s*holder|customer\s*name|name\s*of\s*account)["\s]*[:,]["\s]*([A-Za-z][A-Za-z .,'-]{2,60}?)["\s]*(?:,|$|\s{2,}|account)`)
+
+// ExtractAccountHolder returns the account holder's name from a statement header, if present.
+// It is used to recognise transfers to the holder's own accounts at other banks.
+func ExtractAccountHolder(sampleText string) string {
+	m := accountHolderRe.FindStringSubmatch(sampleText)
+	if m == nil {
+		return ""
+	}
+	return strings.TrimSpace(strings.Trim(m[1], ",. "))
+}
+
+var gtbFilenameRe = regexp.MustCompile(`(?i)^AC_.+_FullStmt\.pdf$`)
+
+// DetectBankFromFilename recognises banks by their e-statement file naming. GTBank PDFs carry the
+// letterhead as an image, so their text alone can't identify the issuer.
+func DetectBankFromFilename(name string) string {
+	if gtbFilenameRe.MatchString(strings.TrimSpace(name)) {
+		return BankGTB
+	}
+	return ""
+}
+
+var (
+	gtbHolderRe  = regexp.MustCompile(`(?i)^AC_(.+?)_[A-Z]+ \d{4}_`)
+	opayHolderRe = regexp.MustCompile(`^([A-Za-z][A-Za-z .'-]+?)_\d{10}_\d{8,}`)
+)
+
+// ExtractHolderFromFilename reads the account holder's name from bank e-statement filenames:
+// GTBank "AC_<SURNAME FIRST MIDDLE>_<MONTH YEAR>_..._FullStmt.pdf" and OPay "<NAME>_<account>_<timestamp>.pdf".
+func ExtractHolderFromFilename(name string) string {
+	name = strings.TrimSpace(name)
+	for _, re := range []*regexp.Regexp{gtbHolderRe, opayHolderRe} {
+		if m := re.FindStringSubmatch(name); m != nil {
+			return strings.Join(strings.Fields(m[1]), " ")
+		}
+	}
+	return ""
 }

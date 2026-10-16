@@ -8,8 +8,9 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.New()
 
-	// Ephemeral RAM: Limit in-memory multipart form uploads to 32MB
-	r.MaxMultipartMemory = MaxMemoryLimit
+	// Ephemeral RAM: MemoryLimiterMiddleware caps the whole body at 32MB. The multipart in-memory
+	// threshold must sit above that cap, otherwise large file parts spill to OS temp files on disk.
+	r.MaxMultipartMemory = MaxMemoryLimit + (1 << 20)
 
 	// Standard middleware stack
 	r.Use(gin.Recovery())

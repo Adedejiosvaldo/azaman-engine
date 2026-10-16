@@ -1,0 +1,13 @@
+.git
+.gitignore
+bin/
+tmp/
+**/__pycache__/
+**/*.pyc
+**/*_test.go
+sidecar/test_*.py
+testdata/
+*.md
+.air.toml
+.claude/
+**/.venv

@@ -1,0 +1,155 @@
+{
+  "_comment": "Single source of truth for category names shared by the Go engine and the Laya sidecar. The Go test TestCategoriesMatchSidecar fails if a Go category is missing here. 'assignable' categories may be chosen by Laya for ambiguous debits; the rest are only set by deterministic Go passes.",
+  "categories": [
+    {
+      "name": "Food & Dining",
+      "assignable": true,
+      "description": "restaurants, fast food, groceries, market money, bakeries, foodstuff"
+    },
+    {
+      "name": "Late Night Food & Lounges",
+      "assignable": true,
+      "description": "food delivery apps, bars, lounges, clubs, nightlife"
+    },
+    {
+      "name": "Commute & Transit",
+      "assignable": true,
+      "description": "ride hailing, bus, keke, okada, transport fare, fuel, petrol"
+    },
+    {
+      "name": "POS Cashout & Agency",
+      "assignable": true,
+      "description": "POS agents, cash withdrawal through agency banking"
+    },
+    {
+      "name": "Tech & Cloud Infrastructure",
+      "assignable": true,
+      "description": "cloud hosting, SaaS, developer tools, software subscriptions for work"
+    },
+    {
+      "name": "Workspace & Co-working",
+      "assignable": true,
+      "description": "co-working desks, office internet, workspace rental"
+    },
+    {
+      "name": "Airtime & Utilities",
+      "assignable": true,
+      "description": "airtime, mobile data, electricity tokens, DisCo bills"
+    },
+    {
+      "name": "Bills & Online Payments",
+      "assignable": true,
+      "description": "payment gateways and bill aggregators such as Remita, Quickteller, CoralPay"
+    },
+    {
+      "name": "Subscriptions & TV",
+      "assignable": true,
+      "description": "DSTV, GOtv, Netflix, Spotify, streaming subscriptions"
+    },
+    {
+      "name": "Education",
+      "assignable": true,
+      "description": "school fees, tuition, WAEC, JAMB, exam registration"
+    },
+    {
+      "name": "Rent & Housing",
+      "assignable": true,
+      "description": "house rent, caution fee, agency fee, waste and water bills"
+    },
+    {
+      "name": "Family & Favors",
+      "assignable": true,
+      "description": "one-off transfers to individuals: allowances, upkeep, gifts, urgent favors"
+    },
+    {
+      "name": "Religious Giving",
+      "assignable": true,
+      "description": "church tithes, offerings, mosque donations, zakat"
+    },
+    {
+      "name": "Betting & Gaming",
+      "assignable": true,
+      "description": "sports betting and gaming platforms"
+    },
+    {
+      "name": "Loans & Debt Service",
+      "assignable": true,
+      "description": "loan app repayments and debt service"
+    },
+    {
+      "name": "Ajo & Thrift",
+      "assignable": true,
+      "description": "ajo, esusu, adashe, cooperative and thrift contributions"
+    },
+    {
+      "name": "Personal Care",
+      "assignable": true,
+      "description": "hair, barbing, makeup, grooming"
+    },
+    {
+      "name": "Shopping & Retail",
+      "assignable": true,
+      "description": "online and in-store shopping, clothing, electronics"
+    },
+    {
+      "name": "Market & Small Vendors",
+      "assignable": true,
+      "description": "traders, market sellers and small shops paid by transfer, often through personal-name or Moniepoint accounts"
+    },
+    {
+      "name": "Commercial & Business",
+      "assignable": true,
+      "description": "payments to businesses and suppliers: ventures, enterprises, stores, limited companies"
+    },
+    {
+      "name": "FinTech & Investments",
+      "assignable": false,
+      "description": "savings wallets and investment platforms"
+    },
+    {
+      "name": "Bank Fees & Charges",
+      "assignable": false,
+      "description": "EMTL, stamp duty, SMS, USSD, VAT and transfer fees"
+    },
+    {
+      "name": "Income & Retainers",
+      "assignable": false,
+      "description": "salary, client payments, retainers"
+    },
+    {
+      "name": "Loan Disbursement",
+      "assignable": false,
+      "description": "loan proceeds received"
+    },
+    {
+      "name": "Internal Transfers",
+      "assignable": false,
+      "description": "transfers between the holder's own accounts"
+    },
+    {
+      "name": "Reversals & Refunds",
+      "assignable": false,
+      "description": "reversal credits for failed debits"
+    },
+    {
+      "name": "Black Tax (Family Support)",
+      "assignable": false,
+      "description": "recurring family support detected from payment periodicity"
+    },
+    {
+      "name": "Recurring Obligations",
+      "assignable": false,
+      "description": "recurring same-amount payments detected from periodicity"
+    },
+    {
+      "name": "Personal Discretionary",
+      "assignable": true,
+      "description": "general lifestyle spending that fits no other category"
+    },
+    {
+      "name": "Uncategorized",
+      "assignable": false,
+      "description": "spending the engine could not categorise with confidence; the user sorts it"
+    }
+  ]
+}

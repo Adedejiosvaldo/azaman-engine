@@ -104,6 +104,8 @@ func HandleDashboard(c *gin.Context) {
     .upload-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
     .upload-desc { color: var(--muted); font-size: 13px; }
     .form-row {
+      position: relative;
+      z-index: 2; /* sit above the full-card invisible file input so the button and password field are clickable */
       display: flex;
       gap: 12px;
       margin-top: 16px;
@@ -140,6 +142,14 @@ func HandleDashboard(c *gin.Context) {
       gap: 16px;
       margin-top: 28px;
     }
+    .internal-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .internal-card .kpi-sub { font-size: 14px; color: var(--text); margin-top: 6px; }
     .kpi-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -226,7 +236,7 @@ func HandleDashboard(c *gin.Context) {
       <div class="badges">
         <div class="badge green">🛡️ Zero-Disk RAM (32MB)</div>
         <div class="badge purple" id="laya-badge">⚡ Laya AI Ready</div>
-        <div class="badge">GTB · Kuda · OPay · Access · Geegpay</div>
+        <div class="badge">OPay · PalmPay · GTB · Kuda · Zenith · +10 banks</div>
       </div>
       <div class="links">
         <a href="/swagger" target="_blank">📖 Swagger Docs</a>
@@ -247,16 +257,19 @@ func HandleDashboard(c *gin.Context) {
     <div id="spinner"></div>
 
     <div id="results" class="hidden">
+      <div class="internal-card hidden" id="check-card" style="border-color: var(--red);">
+        <div class="kpi-sub" id="check-summary"></div>
+      </div>
       <div class="kpis">
         <div class="kpi-card">
           <div class="kpi-label">Total Inflow</div>
           <div class="kpi-value green" id="inflow">₦0.00</div>
-          <div class="kpi-sub" id="inflow-sub">Deposits & Retainers</div>
+          <div class="kpi-sub" id="inflow-sub">Real income (excludes own transfers & savings)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Total Outflow</div>
           <div class="kpi-value red" id="outflow">₦0.00</div>
-          <div class="kpi-sub" id="outflow-sub">Expenses & Burn</div>
+          <div class="kpi-sub" id="outflow-sub">Real spending (excludes own transfers & savings)</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Net Retained</div>
@@ -270,9 +283,19 @@ func HandleDashboard(c *gin.Context) {
         </div>
       </div>
 
+      <div class="internal-card" id="internal-card">
+        <div class="leak-title">🔁 Moved between your accounts <span>Not income · Not spending</span></div>
+        <div class="kpi-sub" id="internal-summary">—</div>
+      </div>
+
+      <div class="internal-card hidden" id="uncat-card">
+        <div class="leak-title">❓ Uncategorized <span>We'd rather not guess</span></div>
+        <div class="kpi-sub" id="uncat-summary"></div>
+      </div>
+
       <div class="leaks-grid">
         <div class="leak-card midnight">
-          <div class="leak-title">🌙 Midnight Cash Leak <span>10PM - 3AM</span></div>
+          <div class="leak-title">🌙 Midnight Cash Leak <span>10PM - 4AM</span></div>
           <div class="leak-amount" id="midnight-amt" style="color: var(--purple);">₦0.00</div>
           <div class="kpi-sub" id="midnight-sub">0 transactions (Chowdeck, Lounges, late rides)</div>
         </div>
@@ -346,6 +369,8 @@ func HandleDashboard(c *gin.Context) {
       }
     });
 
+    const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
     async function uploadStatement() {
       const file = document.getElementById('fileInput').files[0];
       if (!file) {
@@ -386,6 +411,15 @@ func HandleDashboard(c *gin.Context) {
     function renderAudit(report, clientLatency) {
       document.getElementById('results').classList.remove('hidden');
 
+      // Statement check: warn when parsed totals disagree with the totals printed on the statement
+      const chk = report.statement_check || {};
+      document.getElementById('check-card').classList.toggle('hidden', !chk.checked || chk.ok);
+      document.getElementById('check-summary').textContent = chk.checked && !chk.ok
+        ? '⚠️ This statement may not have been read fully: read ' + chk.parsed_rows + ' of ' + chk.stated_rows +
+          ' rows, debits ' + fmtNaira(chk.parsed_debit) + ' vs ' + fmtNaira(chk.stated_debit) +
+          ', credits ' + fmtNaira(chk.parsed_credit) + ' vs ' + fmtNaira(chk.stated_credit) + '. Treat the numbers below with care.'
+        : '';
+
       const s = report.summary;
       document.getElementById('inflow').textContent = fmtNaira(s.total_inflow);
       document.getElementById('outflow').textContent = fmtNaira(s.total_outflow);
@@ -395,9 +429,25 @@ func HandleDashboard(c *gin.Context) {
       document.getElementById('runway').textContent = s.runway_months >= 900 ? '∞ (Self-Sustaining)' : s.runway_months + ' mos';
       document.getElementById('burn-sub').textContent = 'Monthly Burn: ' + fmtNaira(s.avg_monthly_burn);
 
+      // Uncategorized: spending the engine couldn't place with confidence
+      const unc = report.uncategorized || { count: 0, total: 0 };
+      document.getElementById('uncat-summary').textContent = fmtNaira(unc.total) + ' across ' + unc.count +
+        ' payment(s) we couldn\'t confidently place. Counted in your spending, not in any leak.';
+      document.getElementById('uncat-card').classList.toggle('hidden', !unc.count);
+
+      // Own-account and savings movements, shown separately so the totals above stay "real"
+      const it = report.internal_transfers || {};
+      const moneyShort = n => '₦' + Math.round(Number(n) || 0).toLocaleString('en-NG');
+      const inTotal = (it.savings_withdrawals || 0) + (it.self_transfers_in || 0);
+      const outTotal = (it.savings_deposits || 0) + (it.self_transfers_out || 0);
+      document.getElementById('internal-summary').textContent = (inTotal || outTotal)
+        ? moneyShort(inTotal) + ' in (savings ' + moneyShort(it.savings_withdrawals) + ', own transfers ' + moneyShort(it.self_transfers_in) + ')' +
+          ' · ' + moneyShort(outTotal) + ' out (savings ' + moneyShort(it.savings_deposits) + ', own transfers ' + moneyShort(it.self_transfers_out) + ')'
+        : 'No transfers between your own accounts or savings in this statement.';
+
       const leaks = report.cash_leaks;
       document.getElementById('midnight-amt').textContent = fmtNaira(leaks.midnight_leak.total_amount);
-      document.getElementById('midnight-sub').textContent = leaks.midnight_leak.count + ' late night drains (10PM - 3AM)';
+      document.getElementById('midnight-sub').textContent = leaks.midnight_leak.count + ' late night drains (10PM - 4AM)';
 
       document.getElementById('urgent-amt').textContent = fmtNaira(leaks.urgent_2k.total_amount);
       document.getElementById('urgent-sub').textContent = leaks.urgent_2k.count + ' favors (avg: ' + fmtNaira(leaks.urgent_2k.average_transfer_size) + ')';
@@ -422,12 +472,12 @@ func HandleDashboard(c *gin.Context) {
         const amtColor = tx.amount > 0 ? 'color: var(--accent);' : 'color: var(--text);';
         const sign = tx.amount > 0 ? '+' : '';
 
-        tr.innerHTML = 
-          '<td style="font-family: \'JetBrains Mono\', monospace; font-size: 12px; color: var(--muted);">' + (tx.date || '') + '</td>' +
-          '<td><strong>' + (tx.merchant || 'General') + '</strong><div style="font-size: 11px; color: var(--muted);">' + (tx.raw_description || '') + '</div></td>' +
-          '<td>' + (tx.category || '') + '</td>' +
-          '<td><span style="font-size: 12px; color: var(--muted);">' + (tx.classification || '') + '</span></td>' +
-          '<td style="font-family: \'JetBrains Mono\', monospace; font-weight: 700; ' + amtColor + '">' + sign + fmtNaira(tx.amount) + '</td>' +
+        tr.innerHTML =
+          '<td style="font-family: JetBrains Mono, monospace; font-size: 12px; color: var(--muted);">' + esc(tx.date || '') + '</td>' +
+          '<td><strong>' + esc(tx.merchant || 'General') + '</strong><div style="font-size: 11px; color: var(--muted);">' + esc(tx.raw_description || '') + '</div></td>' +
+          '<td>' + esc(tx.category || '') + '</td>' +
+          '<td><span style="font-size: 12px; color: var(--muted);">' + esc(tx.classification || '') + '</span></td>' +
+          '<td style="font-family: JetBrains Mono, monospace; font-weight: 700; ' + amtColor + '">' + sign + fmtNaira(tx.amount) + '</td>' +
           '<td><span class="confidence">' + (tx.confidence * 100).toFixed(0) + '%</span></td>' +
           '<td>' + (flags || '<span style="color: var(--muted); font-size: 11px;">—</span>') + '</td>';
         tbody.appendChild(tr);

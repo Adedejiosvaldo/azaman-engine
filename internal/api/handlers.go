@@ -73,9 +73,13 @@ func HandleAudit(c *gin.Context) {
 	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
 	password := c.DefaultPostForm("password", "")
 	bankOverride := c.DefaultPostForm("bank", "")
+	accountHolder := strings.TrimSpace(c.DefaultPostForm("account_name", ""))
 
 	// 4. Detect bank if not provided
 	bankName := bankOverride
+	if bankName == "" {
+		bankName = parser.DetectBankFromFilename(fileHeader.Filename)
+	}
 	if bankName == "" {
 		sampleSize := 4096
 		if len(fileBytes) < sampleSize {
@@ -83,14 +87,25 @@ func HandleAudit(c *gin.Context) {
 		}
 		bankName = parser.DetectBank(string(fileBytes[:sampleSize]))
 	}
+	if accountHolder == "" {
+		accountHolder = parser.ExtractHolderFromFilename(fileHeader.Filename)
+	}
+	if accountHolder == "" && fileExt != ".pdf" {
+		sampleSize := 4096
+		if len(fileBytes) < sampleSize {
+			sampleSize = len(fileBytes)
+		}
+		accountHolder = parser.ExtractAccountHolder(string(fileBytes[:sampleSize]))
+	}
 
 	var rawTransactions []models.RawTransaction
+	var check models.StatementCheck
 
 	// 5. Route to appropriate ephemeral parser
 	switch fileExt {
 	case ".pdf":
 		var detectedBank string
-		rawTransactions, detectedBank, err = parser.ParsePDF(fileBytes, password, bankName)
+		rawTransactions, detectedBank, check, err = parser.ParsePDF(fileBytes, password, bankName)
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{
 				"error":   "PDF statement extraction failed: " + err.Error(),
@@ -138,6 +153,10 @@ func HandleAudit(c *gin.Context) {
 		decodedTxs[i] = shazam.MatchAndDecode(raw)
 	}
 
+	// 6a. User labels: people the user marked as vendors or family in the dashboard (kept in their browser only)
+	analyzer.ApplyContactLabels(decodedTxs, c.PostFormArray("vendor"), c.PostFormArray("family"), shazam.VendorCategory)
+	analyzer.ApplyPaymentLabels(decodedTxs, c.PostFormArray("payment_label"), shazam.VendorCategory)
+
 	// 6b. Optional Laya AI System 1 Decision Pass for Ambiguous/Low-Confidence Memos
 	layaClient := ai.GetLayaClient()
 	if layaClient.IsAvailable() {
@@ -148,13 +167,16 @@ func HandleAudit(c *gin.Context) {
 			if cleanKey == "" {
 				cleanKey = strings.TrimSpace(strings.ToLower(tx.RawDescription))
 			}
-			if tx.Confidence < 0.90 && tx.Amount < 0 && !seenMemos[cleanKey] {
+			if tx.Confidence < 0.90 && tx.Amount < 0 && layaEligible(tx) && !seenMemos[cleanKey] {
 				seenMemos[cleanKey] = true
 				ambiguousItems = append(ambiguousItems, ai.LayaMemoItem{
-					ID:      tx.ID,
-					Memo:    tx.CleanMemo,
-					Amount:  math.Abs(tx.Amount),
-					RawMemo: tx.RawDescription,
+					ID:       tx.ID,
+					Memo:     layaText(tx),
+					Amount:   math.Abs(tx.Amount),
+					RawMemo:  tx.RawDescription,
+					Hour:     knownHour(tx),
+					IsCredit: tx.Credit > 0,
+					Currency: tx.Currency,
 				})
 				// Cap batch to 5 items to guarantee sub-second responses
 				if len(ambiguousItems) >= 5 {
@@ -186,7 +208,12 @@ func HandleAudit(c *gin.Context) {
 					if !ok {
 						dec, ok = memoDecisions[key]
 					}
-					if ok {
+					// Only override when Laya is more confident than the rules, and never for rows
+					// whose type is already certain (fees, savings, loans).
+					if ok && layaEligible(*tx) && dec.Confidence > tx.Confidence {
+						if tx.Counterparty != "" {
+							tx.DecisionBasis = "ai" // person scoring leaves AI-decided rows alone
+						}
 						if dec.Category != "" {
 							tx.Category = dec.Category
 						}
@@ -199,7 +226,9 @@ func HandleAudit(c *gin.Context) {
 						if dec.Confidence > tx.Confidence {
 							tx.Confidence = dec.Confidence
 						}
-						if dec.IsSilentLeak {
+						// Laya's "silent leak" is about discretionary spend, not time of day: only
+						// count it as a midnight leak when the row's time is known to be late.
+						if h := knownHour(*tx); dec.IsSilentLeak && h != nil && (*h >= 22 || *h <= 3) {
 							tx.Flags.IsMidnightLeak = true
 						}
 						if dec.IsUrgent2k {
@@ -207,6 +236,12 @@ func HandleAudit(c *gin.Context) {
 						}
 						if dec.IsTaxDeductible {
 							tx.Flags.IsTaxDeductible = true
+						}
+						// "Bought, not given": a payment to a person for goods or a service
+						if dec.IsPurchase && tx.Counterparty != "" && tx.Debit > 0 {
+							tx.Category = shazam.VendorCategory
+							tx.Classification = "Personal Purchase"
+							tx.Flags.IsUrgent2k = false
 						}
 					}
 				}
@@ -230,7 +265,14 @@ func HandleAudit(c *gin.Context) {
 		formatName,
 		fileSize,
 		startTime,
+		accountHolder,
 	)
+	audit.Check = check
+
+	// detail=summary drops per-transaction arrays (~95% smaller) for low-end phones and costly data.
+	if c.DefaultPostForm("detail", c.Query("detail")) == "summary" {
+		compactReport(&audit)
+	}
 
 	c.Header("X-Session-ID", sessionID)
 	c.Header("X-Response-Time", time.Since(startTime).String())
@@ -306,10 +348,10 @@ func HandleHealth(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":      "ok",
-		"service":     "azaman-shazam-engine",
-		"uptime":      time.Since(serverStartTime).String(),
-		"version":     "1.0.0",
+		"status":  "ok",
+		"service": "azaman-shazam-engine",
+		"uptime":  time.Since(serverStartTime).String(),
+		"version": "1.0.0",
 		"ai_decision_engine": gin.H{
 			"provider": "Laya AI System 1 Decision Model",
 			"status":   layaStatus,
@@ -323,4 +365,43 @@ func HandleHealth(c *gin.Context) {
 		},
 		"disk_free_compliance": "Ephemeral RAM Only - 0 bytes persisted",
 	})
+}
+
+// compactReport strips per-transaction arrays, keeping every KPI, leak total, and insight.
+func compactReport(r *models.AuditReport) {
+	r.Transactions = nil
+	r.CashLeaks.MidnightLeak.Transactions = nil
+	r.CashLeaks.Urgent2k.Transactions = nil
+	r.CashLeaks.BankCharges.Transactions = nil
+	r.Reversals.UnresolvedDebits = nil
+	for i := range r.CashLeaks.DuplicateDebits.Pairs {
+		r.CashLeaks.DuplicateDebits.Pairs[i].Transactions = nil
+	}
+}
+
+// layaEligible reports whether a transaction may be sent to, or reclassified by, the Laya sidecar.
+// A transfer to a person with no typed purpose is left to person scoring: Laya reads memo text,
+// and a bare name gives it nothing to go on (it guesses bills, loans or even betting).
+func layaEligible(tx models.DecodedTransaction) bool {
+	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan && !tx.Flags.IsSelfTransfer &&
+		(tx.Counterparty == "" || tx.Purpose != "")
+}
+
+// knownHour returns the transaction's hour of day, or nil for date-only rows (parsed as 00:00:00).
+func knownHour(tx models.DecodedTransaction) *int {
+	t := tx.ParsedDate
+	if t.IsZero() || (t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0) {
+		return nil
+	}
+	h := t.Hour()
+	return &h
+}
+
+// layaText is what Laya reads: the typed purpose of a person-to-person transfer when there is one
+// (it carries the meaning; the name only adds noise), otherwise the cleaned memo.
+func layaText(tx models.DecodedTransaction) string {
+	if tx.Purpose != "" {
+		return tx.Purpose
+	}
+	return tx.CleanMemo
 }

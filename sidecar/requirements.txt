@@ -1,4 +1,4 @@
 fastapi>=0.110.0
 uvicorn>=0.28.0
 pydantic>=2.0.0
-laya
+laya==0.3.20

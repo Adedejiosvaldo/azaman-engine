@@ -40,9 +40,33 @@ var (
 		"2 Jan 2006 15:04",
 		"02-Jan-2006 15:04:05",
 		"02-Jan-2006 15:04",
+		// Additional layouts seen on Zenith, First Bank, UBA, PalmPay and Moniepoint exports
+		"02-Jan-06 15:04:05",
+		"02-Jan-06 15:04",
+		"02 Jan 2006, 15:04",
+		"02 Jan 2006, 15:04:05",
+		"02 Jan 2006 03:04 PM",
+		"02 Jan 2006 3:04 PM",
+		"Jan 2, 2006 15:04",
+		"Jan 2, 2006 3:04 PM",
+		"Jan 02 2006",
+		"02 January 2006",
+		"2 January 2006",
+		"Mon, 02 Jan 2006 15:04:05",
+		"Monday, January 2, 2006",
+		"02.01.2006",
+		"02.01.2006 15:04",
+		"02-01-2006 15:04:05",
+		"02-01-2006 15:04",
+		"02/01/2006 15:04:05 PM",
+		"2006-01-02T15:04:05.000Z",
+		"2006-01-02T15:04:05Z07:00",
+		"2006-01-02 15:04:05.000",
+		"20060102",
 	}
 
 	amountSanitizeRe = regexp.MustCompile(`[₦$€£,\s"']`)
+	currencyCodeRe   = regexp.MustCompile(`(?i)NGN|USD|GBP|EUR`)
 )
 
 // ParseDate attempts to parse a string using known Nigerian and international date formats.
@@ -93,9 +117,19 @@ func ParseAmount(amountStr string) float64 {
 
 	// Remove currency symbols, commas, quotes
 	sanitized := amountSanitizeRe.ReplaceAllString(trimmed, "")
-	sanitized = strings.ReplaceAll(sanitized, "NGN", "")
-	sanitized = strings.ReplaceAll(sanitized, "USD", "")
+	sanitized = currencyCodeRe.ReplaceAllString(sanitized, "")
 	sanitized = strings.TrimSpace(sanitized)
+
+	// Trailing minus used by some core-banking exports: "1,200.00-"
+	if strings.HasSuffix(sanitized, "-") {
+		isNegative = true
+		sanitized = strings.TrimSuffix(sanitized, "-")
+	}
+	// Naira written as a plain "N" prefix: "N1,200.00", "-N500"
+	sanitized = strings.TrimPrefix(sanitized, "N")
+	if strings.HasPrefix(sanitized, "-N") {
+		sanitized = "-" + sanitized[2:]
+	}
 
 	if strings.HasPrefix(sanitized, "-") {
 		isNegative = true
