@@ -103,11 +103,6 @@ func HandleDashboard(c *gin.Context) {
     .upload-icon { font-size: 40px; margin-bottom: 12px; }
     .upload-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
     .upload-desc { color: var(--muted); font-size: 13px; }
-    .labels-bar { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
-    .chip { background: #1f2937; border: 1px solid #374151; border-radius: 999px; padding: 4px 10px; color: var(--text); }
-    .chip button { background: none; border: none; color: var(--muted); cursor: pointer; margin-left: 4px; }
-    .label-btn { background: #1f2937; border: 1px solid #374151; border-radius: 6px; color: var(--text); cursor: pointer; font-size: 11px; padding: 2px 6px; margin-top: 4px; margin-right: 4px; }
-    .label-btn:hover { border-color: var(--accent); }
     .form-row {
       position: relative;
       z-index: 2; /* sit above the full-card invisible file input so the button and password field are clickable */
@@ -147,9 +142,6 @@ func HandleDashboard(c *gin.Context) {
       gap: 16px;
       margin-top: 28px;
     }
-    .basis { font-size: 11px; color: var(--muted); margin-top: 3px; }
-    .fix-select { margin-top: 4px; background: #1f2937; color: var(--text); border: 1px solid #374151; border-radius: 6px; font-size: 11px; padding: 2px 4px; }
-    .person-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
     .internal-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -262,7 +254,6 @@ func HandleDashboard(c *gin.Context) {
         <button class="btn" id="uploadBtn" onclick="uploadStatement()">Shazam Statement ⚡</button>
       </div>
     </div>
-    <div id="labels-bar" class="labels-bar hidden"></div>
     <div id="spinner"></div>
 
     <div id="results" class="hidden">
@@ -300,11 +291,6 @@ func HandleDashboard(c *gin.Context) {
       <div class="internal-card hidden" id="uncat-card">
         <div class="leak-title">❓ Uncategorized <span>We'd rather not guess</span></div>
         <div class="kpi-sub" id="uncat-summary"></div>
-      </div>
-
-      <div class="internal-card hidden" id="people-card">
-        <div class="leak-title">🧑‍🤝‍🧑 Who's who <span>Confirm the people we're unsure about</span></div>
-        <div id="people-list"></div>
       </div>
 
       <div class="leaks-grid">
@@ -383,82 +369,7 @@ func HandleDashboard(c *gin.Context) {
       }
     });
 
-    // ---- Contact labels: kept only in this browser (localStorage), sent with each audit ----
-    const LABELS_KEY = 'azaman.labels';
     const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-    function loadLabels() {
-      try {
-        const l = JSON.parse(localStorage.getItem(LABELS_KEY)) || {};
-        return { vendor: l.vendor || [], family: l.family || [], payment: l.payment || [] };
-      } catch (e) { return { vendor: [], family: [], payment: [] }; }
-    }
-
-    function saveLabels(l) {
-      localStorage.setItem(LABELS_KEY, JSON.stringify(l));
-      renderLabels();
-    }
-
-    function counterpartyName(desc) {
-      const m = desc.match(/Transfer (?:to|from)\s+([^|/]+)/i);
-      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
-    }
-
-    function setLabel(kind, name) {
-      const l = loadLabels();
-      const key = name.toLowerCase();
-      l.vendor = l.vendor.filter(n => n.toLowerCase() !== key);
-      l.family = l.family.filter(n => n.toLowerCase() !== key);
-      l[kind].push(name);
-      saveLabels(l);
-      uploadStatement(); // re-run the audit with the new label
-    }
-
-    // Per-payment exception: "<date>|<amount>|<name>|purchase|support"
-    function setPaymentLabel(date, amount, name, kind) {
-      const l = loadLabels();
-      const prefix = date + '|' + amount + '|' + name + '|';
-      l.payment = l.payment.filter(p => !p.startsWith(prefix));
-      l.payment.push(prefix + kind);
-      saveLabels(l);
-      uploadStatement();
-    }
-
-    function removeLabel(kind, name) {
-      const l = loadLabels();
-      l[kind] = l[kind].filter(n => n !== name);
-      saveLabels(l);
-    }
-
-    function renderLabels() {
-      const l = loadLabels();
-      const bar = document.getElementById('labels-bar');
-      const chips = [];
-      l.vendor.forEach(n => chips.push('<span class="chip">🏪 ' + esc(n) + '<button data-remove="vendor" data-name="' + esc(n) + '">×</button></span>'));
-      l.family.forEach(n => chips.push('<span class="chip">👪 ' + esc(n) + '<button data-remove="family" data-name="' + esc(n) + '">×</button></span>'));
-      l.payment.forEach(p => {
-        const [d, a, n, k] = p.split('|');
-        chips.push('<span class="chip">🧾 ' + esc(d) + ' ' + fmtNaira(a) + ' ' + esc(n) + ' → ' + esc(k) + '<button data-remove="payment" data-name="' + esc(p) + '">×</button></span>');
-      });
-      bar.innerHTML = chips.length ? 'Your labels (saved in this browser only): ' + chips.join('') : '';
-      bar.classList.toggle('hidden', chips.length === 0);
-    }
-
-    document.addEventListener('change', e => {
-      const sel = e.target.closest('select.fix-select');
-      if (!sel || !sel.value) return;
-      const [scope, kind] = sel.value.split(':');
-      if (scope === 'person') setLabel(kind, sel.dataset.name);
-      else setPaymentLabel(sel.dataset.date, sel.dataset.amount, sel.dataset.name, kind);
-    });
-
-    document.addEventListener('click', e => {
-      const b = e.target.closest('button');
-      if (!b) return;
-      if (b.dataset.kind) setLabel(b.dataset.kind, b.dataset.name);
-      if (b.dataset.remove) removeLabel(b.dataset.remove, b.dataset.name);
-    });
-    renderLabels();
 
     async function uploadStatement() {
       const file = document.getElementById('fileInput').files[0];
@@ -471,10 +382,6 @@ func HandleDashboard(c *gin.Context) {
       formData.append('statement', file);
       const pwd = document.getElementById('pdfPassword').value;
       if (pwd) formData.append('password', pwd);
-      const labels = loadLabels();
-      labels.vendor.forEach(n => formData.append('vendor', n));
-      labels.family.forEach(n => formData.append('family', n));
-      labels.payment.forEach(p => formData.append('payment_label', p));
 
       document.getElementById('spinner').style.display = 'block';
       document.getElementById('results').classList.add('hidden');
@@ -525,19 +432,8 @@ func HandleDashboard(c *gin.Context) {
       // Uncategorized: spending the engine couldn't place with confidence
       const unc = report.uncategorized || { count: 0, total: 0 };
       document.getElementById('uncat-summary').textContent = fmtNaira(unc.total) + ' across ' + unc.count +
-        ' payment(s). Still counted in your spending, but not in any leak. Sort them with "Fix…" on each row, or leave them.';
+        ' payment(s) we couldn\'t confidently place. Counted in your spending, not in any leak.';
       document.getElementById('uncat-card').classList.toggle('hidden', !unc.count);
-
-      // Who's who: people the engine couldn't settle, ranked by money sent
-      const people = report.people_review || [];
-      const guessText = { family: '👪 probably family / friend', vendor: '🏪 probably a vendor', unsure: '❓ not sure' };
-      document.getElementById('people-list').innerHTML = people.map(p =>
-        '<div class="person-row"><div><strong>' + esc(p.name) + '</strong> · ' + p.count + ' payment(s) · ' + fmtNaira(p.total_sent) +
-        '<div class="basis">' + guessText[p.guess] + ' — ' + esc(p.reasons.join('; ')) + '</div></div>' +
-        '<div><button class="label-btn" data-kind="vendor" data-name="' + esc(p.name) + '">🏪 Vendor</button>' +
-        '<button class="label-btn" data-kind="family" data-name="' + esc(p.name) + '">👪 Family</button></div></div>'
-      ).join('');
-      document.getElementById('people-card').classList.toggle('hidden', people.length === 0);
 
       // Own-account and savings movements, shown separately so the totals above stay "real"
       const it = report.internal_transfers || {};
@@ -576,24 +472,9 @@ func HandleDashboard(c *gin.Context) {
         const amtColor = tx.amount > 0 ? 'color: var(--accent);' : 'color: var(--text);';
         const sign = tx.amount > 0 ? '+' : '';
 
-        const person = tx.counterparty || counterpartyName(tx.raw_description || '');
-        const basisText = { memo: 'decided by the memo', person: 'decided by who they are', name: 'guessed from the name',
-          label: 'your label', payment_label: 'your label for this payment', ai: 'decided by Laya AI' }[tx.decision_basis] || '';
-        let labelBtns = '';
-        if (basisText) labelBtns += '<div class="basis">' + (tx.purpose ? 'Purpose: "' + esc(tx.purpose) + '" · ' : '') + esc(basisText) + '</div>';
-        if (person && tx.amount < 0) {
-          labelBtns += '<select class="fix-select" data-name="' + esc(person) + '" data-date="' + esc(tx.date || '') + '" data-amount="' + Math.abs(tx.amount) + '">' +
-            '<option value="">Fix…</option>' +
-            '<option value="payment:purchase">This payment was a purchase</option>' +
-            '<option value="payment:support">This payment was support / a gift</option>' +
-            '<option value="person:vendor">Always: I buy from ' + esc(person) + '</option>' +
-            '<option value="person:family">Always: ' + esc(person) + ' is family / a friend</option>' +
-            '</select>';
-        }
-
         tr.innerHTML =
           '<td style="font-family: JetBrains Mono, monospace; font-size: 12px; color: var(--muted);">' + esc(tx.date || '') + '</td>' +
-          '<td><strong>' + esc(tx.merchant || 'General') + '</strong><div style="font-size: 11px; color: var(--muted);">' + esc(tx.raw_description || '') + '</div>' + labelBtns + '</td>' +
+          '<td><strong>' + esc(tx.merchant || 'General') + '</strong><div style="font-size: 11px; color: var(--muted);">' + esc(tx.raw_description || '') + '</div></td>' +
           '<td>' + esc(tx.category || '') + '</td>' +
           '<td><span style="font-size: 12px; color: var(--muted);">' + esc(tx.classification || '') + '</span></td>' +
           '<td style="font-family: JetBrains Mono, monospace; font-weight: 700; ' + amtColor + '">' + sign + fmtNaira(tx.amount) + '</td>' +
