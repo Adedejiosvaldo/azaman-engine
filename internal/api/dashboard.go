@@ -297,6 +297,11 @@ func HandleDashboard(c *gin.Context) {
         <div class="kpi-sub" id="internal-summary">—</div>
       </div>
 
+      <div class="internal-card hidden" id="uncat-card">
+        <div class="leak-title">❓ Uncategorized <span>We'd rather not guess</span></div>
+        <div class="kpi-sub" id="uncat-summary"></div>
+      </div>
+
       <div class="internal-card hidden" id="people-card">
         <div class="leak-title">🧑‍🤝‍🧑 Who's who <span>Confirm the people we're unsure about</span></div>
         <div id="people-list"></div>
@@ -516,6 +521,12 @@ func HandleDashboard(c *gin.Context) {
       document.getElementById('margin').textContent = 'Margin: ' + s.profit_margin_pct + '%';
       document.getElementById('runway').textContent = s.runway_months >= 900 ? '∞ (Self-Sustaining)' : s.runway_months + ' mos';
       document.getElementById('burn-sub').textContent = 'Monthly Burn: ' + fmtNaira(s.avg_monthly_burn);
+
+      // Uncategorized: spending the engine couldn't place with confidence
+      const unc = report.uncategorized || { count: 0, total: 0 };
+      document.getElementById('uncat-summary').textContent = fmtNaira(unc.total) + ' across ' + unc.count +
+        ' payment(s). Still counted in your spending, but not in any leak. Sort them with "Fix…" on each row, or leave them.';
+      document.getElementById('uncat-card').classList.toggle('hidden', !unc.count);
 
       // Who's who: people the engine couldn't settle, ranked by money sent
       const people = report.people_review || [];

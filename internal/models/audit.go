@@ -209,19 +209,20 @@ type AuditMeta struct {
 
 // AuditReport is the master payload returned by /api/v1/shazam/audit.
 type AuditReport struct {
-	Summary      AuditSummary            `json:"summary"`
-	CashLeaks    CashLeaks               `json:"cash_leaks"`
-	Categories   []CategoryBreakdown     `json:"categories"`
-	Reversals    ReversalsReport         `json:"reversals"`
-	Internal     InternalTransfersReport `json:"internal_transfers"`
-	Insights     NigeriaInsights         `json:"nigeria_insights"`
-	Tax          TaxEstimate             `json:"tax_estimate"`
-	Business     BusinessSplit           `json:"business_split"`
-	PeopleReview []PersonReview          `json:"people_review"`
-	Check        StatementCheck          `json:"statement_check"`
-	Transactions []DecodedTransaction    `json:"transactions"`
-	BankDetected string                  `json:"bank_detected"`
-	AuditMeta    AuditMeta               `json:"audit_meta"`
+	Summary       AuditSummary            `json:"summary"`
+	CashLeaks     CashLeaks               `json:"cash_leaks"`
+	Categories    []CategoryBreakdown     `json:"categories"`
+	Reversals     ReversalsReport         `json:"reversals"`
+	Internal      InternalTransfersReport `json:"internal_transfers"`
+	Insights      NigeriaInsights         `json:"nigeria_insights"`
+	Tax           TaxEstimate             `json:"tax_estimate"`
+	Business      BusinessSplit           `json:"business_split"`
+	PeopleReview  []PersonReview          `json:"people_review"`
+	Uncategorized UncategorizedReport     `json:"uncategorized"`
+	Check         StatementCheck          `json:"statement_check"`
+	Transactions  []DecodedTransaction    `json:"transactions"`
+	BankDetected  string                  `json:"bank_detected"`
+	AuditMeta     AuditMeta               `json:"audit_meta"`
 }
 
 // PersonReview is a counterparty the engine is unsure about (family/friend vs vendor), ranked by
@@ -246,4 +247,10 @@ type StatementCheck struct {
 	ParsedCredit float64 `json:"parsed_credit"`
 	StatedRows   int     `json:"stated_rows"`
 	ParsedRows   int     `json:"parsed_rows"`
+}
+
+// UncategorizedReport totals spending the engine could not categorise with confidence.
+type UncategorizedReport struct {
+	Count int     `json:"count"`
+	Total float64 `json:"total"`
 }

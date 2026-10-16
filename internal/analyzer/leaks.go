@@ -26,6 +26,7 @@ func GenerateAudit(
 	reversalsReport := DetectReversals(txs)
 	internalReport := DetectSelfTransfers(txs, accountHolder)
 	peopleReview := ScorePeople(txs, accountHolder)
+	uncategorized := MarkUncategorized(txs)
 	recurring := DetectRecurring(txs)
 
 	// 1. Detect duplicates and get enriched transactions with duplicate flags
@@ -130,17 +131,18 @@ func GenerateAudit(
 	}
 
 	return models.AuditReport{
-		Summary:      summary,
-		CashLeaks:    cashLeaks,
-		Categories:   categories,
-		Reversals:    reversalsReport,
-		Internal:     internalReport,
-		Insights:     insights,
-		Tax:          taxEstimate,
-		Business:     businessSplit,
-		PeopleReview: peopleReview,
-		Transactions: enrichedTxs,
-		BankDetected: bankName,
-		AuditMeta:    meta,
+		Summary:       summary,
+		CashLeaks:     cashLeaks,
+		Categories:    categories,
+		Reversals:     reversalsReport,
+		Internal:      internalReport,
+		Insights:      insights,
+		Tax:           taxEstimate,
+		Business:      businessSplit,
+		PeopleReview:  peopleReview,
+		Uncategorized: uncategorized,
+		Transactions:  enrichedTxs,
+		BankDetected:  bankName,
+		AuditMeta:     meta,
 	}
 }

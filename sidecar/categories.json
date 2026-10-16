@@ -145,6 +145,11 @@
       "name": "Personal Discretionary",
       "assignable": true,
       "description": "general lifestyle spending that fits no other category"
+    },
+    {
+      "name": "Uncategorized",
+      "assignable": false,
+      "description": "spending the engine could not categorise with confidence; the user sorts it"
     }
   ]
 }

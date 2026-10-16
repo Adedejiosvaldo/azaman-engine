@@ -368,3 +368,27 @@ func TestUnsurePersonIsNotUrgent2kLeak(t *testing.T) {
 		}
 	}
 }
+
+func TestMarkUncategorized(t *testing.T) {
+	unknownPerson := p2p("SAMUEL DAVID EKPO", "OPay", 2000, t0, false) // basis "name", Family default
+	unknownPerson.Flags.IsUrgent2k = true
+	unknownMemo := debit("GTW", 3.75, t0)
+	unknownMemo.Category, unknownMemo.Confidence = "Personal Discretionary", 0.7
+	decided := p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 5000, t0, false)
+	decided.DecisionBasis = "person"
+	txs := []models.DecodedTransaction{unknownPerson, unknownMemo, decided}
+
+	r := MarkUncategorized(txs)
+	if txs[0].Category != UncategorizedCategory || txs[0].Flags.IsUrgent2k {
+		t.Errorf("unsettled person should be Uncategorized and leave Urgent 2k: %q", txs[0].Category)
+	}
+	if txs[1].Category != UncategorizedCategory {
+		t.Errorf("unrecognised memo should be Uncategorized: %q", txs[1].Category)
+	}
+	if txs[2].Category != "Family & Favors" {
+		t.Errorf("decided rows must be left alone: %q", txs[2].Category)
+	}
+	if r.Count != 2 || r.Total != 2003.75 {
+		t.Errorf("report: %+v", r)
+	}
+}
