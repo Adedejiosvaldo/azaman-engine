@@ -1,5 +1,6 @@
 # Usage (on the VPS, from the repo root):
-#   DOMAIN=azaman.example.com docker compose -f deploy/docker-compose.yml up -d --build
+#   cp deploy/.env.example deploy/.env   # then set DOMAIN
+#   docker compose -f deploy/docker-compose.yml up -d --build
 services:
   azaman:
     build: ..
@@ -10,7 +11,7 @@ services:
     mem_limit: 3g
     environment:
       # Only these origins may call the API from a browser (the dashboard itself is same-origin)
-      ALLOWED_ORIGINS: https://${DOMAIN:?set DOMAIN, e.g. azaman.example.com}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://${DOMAIN:?set DOMAIN in deploy/.env}}
     expose:
       - "8080"          # reachable by Caddy only; no host port published
 
@@ -24,7 +25,7 @@ services:
       - "443:443"
       - "443:443/udp"   # HTTP/3
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN, e.g. azaman.example.com}
+      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data      # TLS certificates (persist across restarts)
