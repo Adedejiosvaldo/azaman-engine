@@ -41,7 +41,14 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 	var pdfReader *pdf.Reader
 
 	if password != "" {
+		// The library keeps calling the callback until it returns "", so supply the
+		// password once; otherwise a wrong password loops forever.
+		supplied := false
 		pdfReader, err = pdf.NewReaderEncrypted(readerAt, size, func() string {
+			if supplied {
+				return ""
+			}
+			supplied = true
 			return password
 		})
 	} else {
