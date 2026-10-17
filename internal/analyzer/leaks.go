@@ -117,7 +117,12 @@ func GenerateAudit(
 		return categories[i].Amount > categories[j].Amount
 	})
 
-	// 7. Audit metadata
+	// 7. Scorecard: spending buckets, month-by-month flow and the letter grade
+	spendingMix := BuildSpendingMix(enrichedTxs, leakByTx, internalReport.SavingsDeposits)
+	monthly := BuildMonthly(enrichedTxs)
+	grade := GradeAudit(summary, insights, spendingMix, periodDays, len(enrichedTxs))
+
+	// 8. Audit metadata
 	executionTimeMs := time.Since(startTime).Milliseconds()
 
 	meta := models.AuditMeta{
@@ -141,6 +146,9 @@ func GenerateAudit(
 		Business:      businessSplit,
 		PeopleReview:  peopleReview,
 		Uncategorized: uncategorized,
+		Grade:         grade,
+		SpendingMix:   spendingMix,
+		Monthly:       monthly,
 		Transactions:  enrichedTxs,
 		BankDetected:  bankName,
 		AuditMeta:     meta,

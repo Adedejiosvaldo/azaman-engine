@@ -220,6 +220,9 @@ type AuditReport struct {
 	PeopleReview  []PersonReview          `json:"people_review"`
 	Uncategorized UncategorizedReport     `json:"uncategorized"`
 	Check         StatementCheck          `json:"statement_check"`
+	Grade         FinancialGrade          `json:"grade"`
+	SpendingMix   SpendingMix             `json:"spending_mix"`
+	Monthly       MonthlyReport           `json:"monthly"`
 	Transactions  []DecodedTransaction    `json:"transactions"`
 	BankDetected  string                  `json:"bank_detected"`
 	AuditMeta     AuditMeta               `json:"audit_meta"`
@@ -253,4 +256,68 @@ type StatementCheck struct {
 type UncategorizedReport struct {
 	Count int     `json:"count"`
 	Total float64 `json:"total"`
+}
+
+// SpendingBucket groups spending by what it does for the account holder.
+type SpendingBucket struct {
+	Key           string              `json:"key"` // "builders", "essentials", "lifestyle", "drains", "unclassified"
+	Label         string              `json:"label"`
+	Description   string              `json:"description"`
+	Amount        float64             `json:"amount"`
+	Percentage    float64             `json:"percentage"`
+	Count         int                 `json:"count"`
+	TopCategories []CategoryBreakdown `json:"top_categories"`
+}
+
+// SpendingMix splits where money went into builders, essentials, lifestyle and drains. Savings
+// deposits are internal moves (not spend) but count as builders here, so Total is outflow plus deposits.
+type SpendingMix struct {
+	Total   float64          `json:"total"`
+	Buckets []SpendingBucket `json:"buckets"`
+}
+
+// MonthlyFlow is one calendar month of real inflow and outflow (internal moves excluded).
+type MonthlyFlow struct {
+	Month   string  `json:"month"` // "2006-01"
+	Label   string  `json:"label"` // "Jan 2006"
+	Inflow  float64 `json:"inflow"`
+	Outflow float64 `json:"outflow"`
+	Net     float64 `json:"net"`
+	Count   int     `json:"count"`
+	Partial bool    `json:"partial"` // the statement covers only part of this month
+}
+
+// MonthlyReport is the month-by-month cashflow with simple streak stats.
+type MonthlyReport struct {
+	Months         []MonthlyFlow `json:"months"`
+	PositiveMonths int           `json:"positive_months"`
+	PositiveStreak int           `json:"positive_streak"` // consecutive net-positive months ending with the latest
+	BestMonth      string        `json:"best_month"`
+	WorstMonth     string        `json:"worst_month"`
+}
+
+// GradeFactor is one scored input to the financial grade.
+type GradeFactor struct {
+	Key        string  `json:"key"`
+	Label      string  `json:"label"`
+	Points     float64 `json:"points"`
+	MaxPoints  float64 `json:"max_points"`
+	Applicable bool    `json:"applicable"` // false when the statement lacks the data (e.g. no income)
+	Value      float64 `json:"value"`
+	Detail     string  `json:"detail"`
+	Tip        string  `json:"tip"`
+}
+
+// FinancialGrade is a letter grade (A+ to F) with the factors behind it and the next step up.
+type FinancialGrade struct {
+	Grade         string        `json:"grade"`
+	Score         int           `json:"score"` // 0-100
+	Headline      string        `json:"headline"`
+	Factors       []GradeFactor `json:"factors"`
+	NextGrade     string        `json:"next_grade,omitempty"`
+	PointsToNext  float64       `json:"points_to_next,omitempty"`
+	Focus         string        `json:"focus,omitempty"` // key of the factor with the most points to gain
+	FocusTip      string        `json:"focus_tip,omitempty"`
+	LowConfidence bool          `json:"low_confidence"` // statement too short or too sparse to judge
+	Note          string        `json:"note,omitempty"`
 }
