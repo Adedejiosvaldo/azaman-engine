@@ -233,25 +233,26 @@ var gradeBands = []struct {
 	grade    string
 	headline string
 }{
-	{90, "A+", "Elite money discipline"},
-	{82, "A", "Strong control of your money"},
-	{75, "B+", "Solid, with room to tighten"},
-	{68, "B", "Decent, but money is slipping"},
-	{60, "C+", "Leaky: small fixes add up"},
-	{52, "C", "Money is slipping through"},
-	{40, "D", "Under pressure"},
-	{0, "F", "Red alert: spending outruns income"},
+	{85, "A+", "Money master"},
+	{75, "A", "Strong control of your money"},
+	{67, "B+", "Solid, with room to tighten"},
+	{58, "B", "Doing well, a few leaks to plug"},
+	{50, "C+", "Small fixes add up fast"},
+	{42, "C", "Money is slipping through"},
+	{30, "D", "Room to grow"},
+	{0, "F", "Time for a money reset"},
 }
 
-// Factor targets: the value at which a factor earns full points.
+// Factor targets: the value at which a factor earns full points. Set to be reachable rather than
+// ideal: the grade is a game people should be able to climb, not a lecture.
 const (
-	targetKeptPct    = 25.0 // keep a quarter of income
-	targetSavingsPct = 10.0
-	targetDrainsPct  = 5.0
-	zeroDrainsPct    = 30.0 // drains at or above this share score nothing
-	targetRunway     = 6.0  // months
-	targetDebtPct    = 10.0
-	zeroDebtPct      = 40.0
+	targetKeptPct    = 15.0
+	targetSavingsPct = 5.0
+	targetDrainsPct  = 10.0
+	zeroDrainsPct    = 50.0 // drains at or above this share score nothing
+	targetRunway     = 3.0  // months
+	targetDebtPct    = 15.0
+	zeroDebtPct      = 50.0
 )
 
 func clamp01(v float64) float64 {
@@ -286,8 +287,8 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		} else {
 			kept.Detail = fmt.Sprintf("You spent %.1f%% more than came in.", -margin)
 		}
-		kept.Tip = fmt.Sprintf("Keep about %s more each month to hold on to a quarter of your income.",
-			perMonth((targetKeptPct-margin)/100*income))
+		kept.Tip = fmt.Sprintf("Keep about %s more each month to hold on to %.0f%% of your income.",
+			perMonth((targetKeptPct-margin)/100*income), targetKeptPct)
 	} else {
 		kept.Detail = "No income on this statement to compare spending against."
 	}
@@ -300,8 +301,8 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		saving.Value = round2(rate)
 		saving.Points = clamp01(rate/targetSavingsPct) * saving.MaxPoints
 		saving.Detail = fmt.Sprintf("%.1f%% of income went into savings, investments or ajo.", rate)
-		saving.Tip = fmt.Sprintf("Move %s a month into a savings wallet or ajo to reach 10%%.",
-			perMonth((targetSavingsPct-rate)/100*income))
+		saving.Tip = fmt.Sprintf("Move %s a month into a savings wallet or ajo to reach %.0f%%.",
+			perMonth((targetSavingsPct-rate)/100*income), targetSavingsPct)
 	} else {
 		saving.Detail = "No income on this statement to measure savings against."
 	}
@@ -345,8 +346,8 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		default:
 			runway.Detail = fmt.Sprintf("Your balance covers %.1f months of spending.", r)
 		}
-		runway.Tip = fmt.Sprintf("Build %s%s more buffer to reach 6 months of runway.",
-			sym, money(math.Max(targetRunway-r, 0)*burn))
+		runway.Tip = fmt.Sprintf("Build %s%s more buffer to reach %.0f months of runway.",
+			sym, money(math.Max(targetRunway-r, 0)*burn), targetRunway)
 	} else {
 		runway.Detail = "No spending to measure runway against."
 	}

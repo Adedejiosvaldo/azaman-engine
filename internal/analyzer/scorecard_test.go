@@ -123,7 +123,7 @@ func TestGradeAuditStrongAndWeak(t *testing.T) {
 	weak := GradeAudit(
 		models.AuditSummary{TotalInflow: 500000, NetRetained: -100000, RunwayMonths: 0.3, WeightedMonthlyBurn: 300000},
 		models.NigeriaInsights{SavingsRatePct: 0, DebtServiceRatioPct: 45},
-		mixWithDrains(600000, 35), 90, 120)
+		mixWithDrains(600000, 55), 90, 120)
 	if weak.Grade != "F" {
 		t.Errorf("weak = %s (%d), want F", weak.Grade, weak.Score)
 	}
