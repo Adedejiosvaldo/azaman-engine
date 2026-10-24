@@ -397,3 +397,25 @@ func TestMarkUncategorized(t *testing.T) {
 		t.Errorf("report: %+v", r)
 	}
 }
+
+func TestBuildFindingsRanksAndSkipsSmall(t *testing.T) {
+	leaks := models.CashLeaks{}
+	leaks.Urgent2k.TotalAmount, leaks.Urgent2k.Count = 852000, 163
+	leaks.DuplicateDebits.TotalPotentialRefund, leaks.DuplicateDebits.Count = 17640, 13
+	leaks.MidnightLeak.TotalAmount = 400 // below the threshold: noise
+	got := BuildFindings("NGN", leaks, models.ReversalsReport{}, models.NigeriaInsights{})
+	if len(got) != 2 || got[0].Key != "urgent_2k" || got[1].Key != "duplicates" {
+		t.Fatalf("want urgent_2k then duplicates, got %+v", got)
+	}
+	if got[0].Action == "" {
+		t.Error("every finding needs an action")
+	}
+}
+
+func TestMarkUngraded(t *testing.T) {
+	g := models.FinancialGrade{Grade: "B", Score: 72, FocusTip: "save more"}
+	MarkUngraded(&g, "reason")
+	if g.Grade != "N/A" || g.Score != 0 || g.FocusTip != "" || !g.LowConfidence || g.Note != "reason" {
+		t.Errorf("ungraded state not applied: %+v", g)
+	}
+}

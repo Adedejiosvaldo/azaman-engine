@@ -147,6 +147,7 @@ func GenerateAudit(
 		PeopleReview:  peopleReview,
 		Uncategorized: uncategorized,
 		Grade:         grade,
+		Findings:      BuildFindings(summary.Currency, cashLeaks, reversalsReport, insights),
 		SpendingMix:   spendingMix,
 		Monthly:       monthly,
 		Transactions:  enrichedTxs,

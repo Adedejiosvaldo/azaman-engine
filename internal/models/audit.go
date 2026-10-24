@@ -221,6 +221,7 @@ type AuditReport struct {
 	Uncategorized UncategorizedReport     `json:"uncategorized"`
 	Check         StatementCheck          `json:"statement_check"`
 	Grade         FinancialGrade          `json:"grade"`
+	Findings      []Finding               `json:"findings"`
 	SpendingMix   SpendingMix             `json:"spending_mix"`
 	Monthly       MonthlyReport           `json:"monthly"`
 	Transactions  []DecodedTransaction    `json:"transactions"`
@@ -310,6 +311,7 @@ type GradeFactor struct {
 	Value      float64 `json:"value"`
 	Detail     string  `json:"detail"`
 	Tip        string  `json:"tip"`
+	Explain    string  `json:"explain"` // what the factor measures, in plain words
 }
 
 // FinancialGrade is a letter grade (A+ to F) with the factors behind it and the next step up.
@@ -324,4 +326,14 @@ type FinancialGrade struct {
 	FocusTip      string        `json:"focus_tip,omitempty"`
 	LowConfidence bool          `json:"low_confidence"` // statement too short or too sparse to judge
 	Note          string        `json:"note,omitempty"`
+}
+
+// Finding is one money problem the audit surfaced, with what it costs and the first thing to do
+// about it. Findings are ranked by amount, biggest first.
+type Finding struct {
+	Key    string  `json:"key"`
+	Title  string  `json:"title"`
+	Amount float64 `json:"amount"`
+	Detail string  `json:"detail"`
+	Action string  `json:"action"`
 }

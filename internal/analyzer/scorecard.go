@@ -263,6 +263,26 @@ func round1(v float64) float64 {
 	return math.Round(v*10) / 10
 }
 
+// factorExplain says what each factor measures, for the info icon next to it.
+var factorExplain = map[string]string{
+	"money_kept":   "How much of the money that came in you still had at the end. Keeping 15% or more earns full points.",
+	"saving_habit": "How much you moved into savings or investments (OWealth, PiggyVest, Cowrywise...). 5% of income earns full points.",
+	"drains":       "Money lost to leaks: late-night spending, small urgent transfers, double charges, bank fees and betting. Under 10% of spending earns full points.",
+	"runway":       "How many months your balance would last at your current spending. Three months earns full points.",
+	"debt_load":    "How much of your income goes to loan repayments. Under 15% earns full points.",
+}
+
+// MarkUngraded replaces the letter grade when the statement could not be read reliably: a wrong
+// grade is worse than none, because people share it.
+func MarkUngraded(g *models.FinancialGrade, reason string) {
+	g.Grade = "N/A"
+	g.Score = 0
+	g.Headline = "We couldn't grade this statement"
+	g.NextGrade, g.PointsToNext, g.Focus, g.FocusTip = "", 0, "", ""
+	g.LowConfidence = true
+	g.Note = reason
+}
+
 // GradeAudit scores the statement out of 100 from five factors and maps it to a letter grade.
 // Factors the statement has no data for (e.g. no income) are left out and the score is rescaled,
 // so a spend-only account is not failed for lacking a salary line.
@@ -375,6 +395,7 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 	grade := models.FinancialGrade{Factors: factors}
 	for i := range factors {
 		f := &grade.Factors[i]
+		f.Explain = factorExplain[f.Key]
 		f.Points = round1(f.Points)
 		if !f.Applicable {
 			f.Points = 0

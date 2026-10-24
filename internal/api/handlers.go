@@ -271,6 +271,12 @@ func HandleAudit(c *gin.Context) {
 		check = parser.CheckBalances(rawTransactions)
 	}
 	audit.Check = check
+	switch {
+	case check.Checked && !check.OK:
+		analyzer.MarkUngraded(&audit.Grade, "Some rows on this statement didn't add up when we read it, so a grade could be wrong. Your leaks and totals are shown, but treat them as a guide.")
+	case audit.Summary.Currency != "" && audit.Summary.Currency != "NGN":
+		analyzer.MarkUngraded(&audit.Grade, "Grades are tuned for naira accounts. Your leaks and totals are shown, but the grade would not be fair to this account.")
+	}
 
 	// detail=summary drops per-transaction arrays (~95% smaller) for low-end phones and costly data.
 	if c.DefaultPostForm("detail", c.Query("detail")) == "summary" {
