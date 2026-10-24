@@ -187,10 +187,11 @@ $$\text{Condition} = (\text{Debit}) \land (\text{Hour} \in \{22, 23, 0, 1, 2, 3\
 - Date-only statements (no time column) parse as 00:00; those rows are treated as *time unknown*, not midnight. Known late-night merchants (Chowdeck, Bolt, lounges) are only assumed late-night when the statement has no time of day.
 - Savings deposits (OWealth auto-save etc.) are never midnight leaks.
 
-#### 3. 24-Hour Duplicate Debit Detection
+#### 3. Duplicate Debit Detection
 *Source: [`internal/analyzer/duplicates.go`](internal/analyzer/duplicates.go)*
-$$\text{Match} \iff (\text{Merchant}_A = \text{Merchant}_B) \land (|A_{\text{amount}} - B_{\text{amount}}| < 0.01) \land (|T_A - T_B| \le 1440\text{ minutes})$$
+$$\text{Match} \iff (\text{Merchant}_A = \text{Merchant}_B) \land (|A_{\text{amount}} - B_{\text{amount}}| < 0.01) \land (|T_A - T_B| \le 10\text{ minutes})$$
 - Detects POS double-swipes, gateway retry duplications, and automated system double-charges.
+- A double charge lands within minutes, so the same data plan bought hours apart is not flagged. Date-only statements need the same day.
 - Assigns group IDs (`DUP-001`, `DUP-002`) and computes potential refund recovery.
 
 #### 4. Runway & Burn Rate Projection
@@ -204,17 +205,33 @@ $$\text{Runway (Months)} = \frac{\text{Closing Balance}}{\text{Weighted Burn}}$$
 
 ---
 
+### Statement Check
+*Source: [`internal/parser/pdf_parser.go`](internal/parser/pdf_parser.go)*
+
+Every audit reports `statement_check`, so a misread statement is flagged instead of silently giving wrong numbers. The dashboard shows a warning when it fails.
+- **Printed totals** (`method: "totals"`, OPay): parsed debits and credits must be within 0.5% of the totals on the statement, and the row count must match.
+- **Running balance** (`method: "balance"`, other banks, CSV and Excel): each row's balance must equal the previous balance plus its credit minus its debit, read in either date order. Up to 2% of rows may break; more means rows were skipped or misread.
+- Statements with neither printed totals nor a balance column are reported as not checked.
+
 ### E. Laya AI Decision Pass (Hybrid AI Sidecar)
 *Source: [`internal/ai/laya_client.go`](internal/ai/laya_client.go) & [`sidecar/laya_service.py`](sidecar/laya_service.py)*
 
 For ambiguous memos where confidence $< 0.90$:
 - **Deduplication**: Memos are deduplicated by clean text before querying Laya.
 - **Batch Capping**: Capped at $\le 5$ items per statement audit to guarantee sub-second completion.
+- **What goes to Laya**: Only rows with typed text. A transfer with just a name and no purpose is left to person scoring.
+- **Confidence**: Laya is overconfident on Nigerian memos, so its score is scaled to at most 0.7 and never overrules a Go rule.
 - **Shared Taxonomy**: [`sidecar/categories.json`](sidecar/categories.json) is the single category list for both sides. Laya may only answer with `assignable` categories, and the Go test `TestCategoriesMatchSidecar` fails if the engine uses a category missing from the file.
 - **Guarded Overrides**: Fees, savings and loan rows are never sent to Laya. A Laya answer only replaces the rule-based one when its confidence is higher. Go also sends the hour of day (when known), direction and currency.
 - **Ephemeral Sidecar Cache**: A bounded LRU (10k entries, 1h TTL; `LAYA_CACHE_MAX`, `LAYA_CACHE_TTL`). Keys are SHA-256 hashes and values hold only the decision, so no memo text or names are retained. `DELETE /cache` empties it, and `/health` reports its size.
 - **Input Limits**: At most 50 items per batch and 300 characters per memo (HTTP 422 otherwise). The Go client rejects non-200 responses and reads at most 1MB.
 - **Offline Fallback**: If Laya is offline, Go falls back to rule-based heuristics without blocking requests. If the `laya` package is missing, the sidecar uses whole-word fallback rules that mirror the Go dictionary (`LAYA_DISABLE=1` forces this mode).
+- **Your Own Memo Model**: [`sidecar/memo_model.py`](sidecar/memo_model.py) trains a small classifier (character and word TF-IDF, logistic regression) on memos you label. The sidecar asks it before Laya; it answers only when at least 50% sure, with confidence capped at 0.89 so Go rules still win.
+  1. `make labels AUDIT=tmp/audit.json` writes the uncertain memos to `sidecar/data/labels.csv`, with the engine's guess in `suggested`.
+  2. Fill in the `label` column (the command prints the valid categories). A category needs at least 3 examples.
+  3. `make train` prints cross-validated accuracy per category and saves `sidecar/models/memo_model.joblib`. `/health` reports whether it is loaded.
+
+  Labels and the model hold personal memo text: both folders are git-ignored, and in Docker the model is mounted at runtime, never built into the image.
 - **Tests**: `python -m unittest sidecar.test_laya_service -v` (run from the repo root).
 
 ### F. Nigeria-Specific Intelligence

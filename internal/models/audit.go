@@ -250,6 +250,10 @@ type StatementCheck struct {
 	ParsedCredit float64 `json:"parsed_credit"`
 	StatedRows   int     `json:"stated_rows"`
 	ParsedRows   int     `json:"parsed_rows"`
+	// Method is "totals" (compared with printed totals) or "balance" (each row's amount must
+	// carry the running balance from the row before; a skipped or misread row breaks the chain).
+	Method        string `json:"method"`
+	BalanceBreaks int    `json:"balance_breaks"`
 }
 
 // UncategorizedReport totals spending the engine could not categorise with confidence.

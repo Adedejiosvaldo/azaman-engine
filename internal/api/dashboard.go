@@ -414,11 +414,16 @@ func HandleDashboard(c *gin.Context) {
       // Statement check: warn when parsed totals disagree with the totals printed on the statement
       const chk = report.statement_check || {};
       document.getElementById('check-card').classList.toggle('hidden', !chk.checked || chk.ok);
-      document.getElementById('check-summary').textContent = chk.checked && !chk.ok
-        ? '⚠️ This statement may not have been read fully: read ' + chk.parsed_rows + ' of ' + chk.stated_rows +
+      let chkMsg = '';
+      if (chk.checked && !chk.ok && chk.method === 'balance') {
+        chkMsg = '⚠️ This statement may not have been read fully: ' + chk.balance_breaks + ' of ' + chk.parsed_rows +
+          ' rows do not follow on from the running balance. Treat the numbers below with care.';
+      } else if (chk.checked && !chk.ok) {
+        chkMsg = '⚠️ This statement may not have been read fully: read ' + chk.parsed_rows + ' of ' + chk.stated_rows +
           ' rows, debits ' + fmtNaira(chk.parsed_debit) + ' vs ' + fmtNaira(chk.stated_debit) +
-          ', credits ' + fmtNaira(chk.parsed_credit) + ' vs ' + fmtNaira(chk.stated_credit) + '. Treat the numbers below with care.'
-        : '';
+          ', credits ' + fmtNaira(chk.parsed_credit) + ' vs ' + fmtNaira(chk.stated_credit) + '. Treat the numbers below with care.';
+      }
+      document.getElementById('check-summary').textContent = chkMsg;
 
       const s = report.summary;
       document.getElementById('inflow').textContent = fmtNaira(s.total_inflow);

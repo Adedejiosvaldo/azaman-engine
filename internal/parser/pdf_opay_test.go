@@ -57,3 +57,23 @@ func TestCheckTotals(t *testing.T) {
 		t.Error("missing rows must fail the check")
 	}
 }
+
+func TestCheckBalances(t *testing.T) {
+	chain := []models.RawTransaction{
+		{Credit: 1000, Balance: 1000}, {Debit: 200, Balance: 800}, {Debit: 300, Balance: 500}, {Credit: 50, Balance: 550},
+	}
+	if c := CheckBalances(chain); !c.Checked || !c.OK || c.Method != "balance" {
+		t.Errorf("unbroken chain: %+v", c)
+	}
+	newestFirst := []models.RawTransaction{chain[3], chain[2], chain[1], chain[0]}
+	if c := CheckBalances(newestFirst); !c.OK {
+		t.Errorf("newest-first statement should pass: %+v", c)
+	}
+	missingRow := []models.RawTransaction{chain[0], chain[2], chain[3]} // the 200 debit was skipped
+	if c := CheckBalances(missingRow); c.OK || c.BalanceBreaks != 1 {
+		t.Errorf("a skipped row should break the chain: %+v", c)
+	}
+	if c := CheckBalances([]models.RawTransaction{{Debit: 5}, {Debit: 7}}); c.Checked {
+		t.Error("no balance column must not be reported as checked")
+	}
+}

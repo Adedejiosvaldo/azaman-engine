@@ -267,6 +267,9 @@ func HandleAudit(c *gin.Context) {
 		startTime,
 		accountHolder,
 	)
+	if !check.Checked {
+		check = parser.CheckBalances(rawTransactions)
+	}
 	audit.Check = check
 
 	// detail=summary drops per-transaction arrays (~95% smaller) for low-end phones and costly data.

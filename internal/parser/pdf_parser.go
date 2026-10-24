@@ -394,6 +394,7 @@ func CheckTotals(txs []models.RawTransaction, stated *models.StatementCheck) mod
 	}
 	check := *stated
 	check.Checked = true
+	check.Method = "totals"
 	check.ParsedRows = len(txs)
 	for _, tx := range txs {
 		check.ParsedDebit += tx.Debit
@@ -649,4 +650,44 @@ func extractFieldsFromTokens(tokens []string) (desc string, debit float64, credi
 	}
 
 	return desc, debit, credit, balance, ref
+}
+
+// CheckBalances verifies a statement without printed totals through its running balance: each
+// row's balance must equal the previous balance plus its credit minus its debit. Statements may be
+// newest-first, so both orders are tried. Up to 2% of rows may break (bank rounding, fee rows
+// sharing a balance); more means rows were skipped or misread.
+func CheckBalances(txs []models.RawTransaction) models.StatementCheck {
+	withBalance := 0
+	for _, tx := range txs {
+		if tx.Balance != 0 {
+			withBalance++
+		}
+	}
+	if len(txs) < 2 || withBalance*5 < len(txs)*4 {
+		return models.StatementCheck{} // no usable balance column
+	}
+	breaks := func(next func(prev, cur models.RawTransaction) bool) int {
+		n := 0
+		for i := 1; i < len(txs); i++ {
+			if !next(txs[i-1], txs[i]) {
+				n++
+			}
+		}
+		return n
+	}
+	follows := func(a, b models.RawTransaction) bool { // b comes after a
+		return math.Abs(a.Balance+b.Credit-b.Debit-b.Balance) <= 0.01
+	}
+	forward := breaks(follows)
+	backward := breaks(func(prev, cur models.RawTransaction) bool { return follows(cur, prev) })
+	check := models.StatementCheck{Checked: true, Method: "balance", ParsedRows: len(txs),
+		BalanceBreaks: min(forward, backward)}
+	for _, tx := range txs {
+		check.ParsedDebit += tx.Debit
+		check.ParsedCredit += tx.Credit
+	}
+	check.ParsedDebit = math.Round(check.ParsedDebit*100) / 100
+	check.ParsedCredit = math.Round(check.ParsedCredit*100) / 100
+	check.OK = check.BalanceBreaks*50 <= len(txs)
+	return check
 }
