@@ -39,6 +39,9 @@ RUN if [ "$PRELOAD_LAYA" = "1" ]; then \
       python -c "from laya import Router; Router(preload=True); print('Laya checkpoints cached')"; \
     fi
 
+# The runtime user must be able to read the cached checkpoints (avoids "Permission denied" on the hub cache)
+RUN if [ -d /opt/models ]; then chmod -R a+rX /opt/models; fi
+
 COPY sidecar/laya_service.py sidecar/categories.json sidecar/
 COPY --from=engine /out/server /app/server
 COPY docker/entrypoint.sh /app/entrypoint.sh
