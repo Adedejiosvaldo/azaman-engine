@@ -36,7 +36,13 @@ func SetupRouter() *gin.Engine {
 			shazamGroup.POST("/decode-memo", HandleDecodeMemo)
 		}
 
+		// Same audit under a brand-neutral path; /shazam/audit stays for existing clients.
+		v1.POST("/audit", HandleAudit)
 		v1.GET("/merchants", HandleGetMerchants)
+
+		// Privacy-safe counters (numbers only)
+		v1.POST("/events", HandleEvent)
+		v1.GET("/stats", HandleStats)
 	}
 
 	return r

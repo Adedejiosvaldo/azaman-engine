@@ -70,6 +70,11 @@ func AnalyzeDuplicates(txs []models.DecodedTransaction) (models.DuplicateDebitsR
 				continue
 			}
 
+			// A double charge hits one account. The same amount from two different accounts is two payments.
+			if itemA.tx.Account != itemB.tx.Account {
+				continue
+			}
+
 			// Must match vendor or clean memo
 			if itemA.tx.Merchant != itemB.tx.Merchant && itemA.tx.CleanMemo != itemB.tx.CleanMemo {
 				continue

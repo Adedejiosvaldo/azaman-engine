@@ -23,10 +23,15 @@ const burnDecay = 0.85
 func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models.AuditSummary {
 	var totalInflow, totalOutflow float64
 	var currentBalance float64
-	var latest time.Time
 	var minDate, maxDate time.Time
 	var currency = "NGN"
 	haveBalance := false
+	// Closing balance per account: a multi-statement audit adds up each account's latest balance.
+	type closing struct {
+		balance float64
+		at      time.Time
+	}
+	closings := make(map[string]*closing)
 	monthly := make(map[string]float64)
 
 	for _, tx := range txs {
@@ -55,11 +60,18 @@ func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models
 
 		// Closing balance = balance on the most recent row. Statements can be newest-first,
 		// so use the date rather than row order; ties keep the later row.
-		if tx.Balance != 0 && (!haveBalance || !tx.ParsedDate.Before(latest)) {
-			currentBalance = tx.Balance
-			latest = tx.ParsedDate
+		if tx.Balance != 0 {
+			c, ok := closings[tx.Account]
+			if !ok {
+				closings[tx.Account] = &closing{balance: tx.Balance, at: tx.ParsedDate}
+			} else if !tx.ParsedDate.Before(c.at) {
+				c.balance, c.at = tx.Balance, tx.ParsedDate
+			}
 			haveBalance = true
 		}
+	}
+	for _, c := range closings {
+		currentBalance += c.balance
 	}
 
 	netRetained := totalInflow - totalOutflow

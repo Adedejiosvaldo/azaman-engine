@@ -13,7 +13,7 @@ func HandleDashboard(c *gin.Context) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Azaman — Shazam for Bank Statements</title>
+  <title>Azaman — Who Chop My Money?</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -232,7 +232,7 @@ func HandleDashboard(c *gin.Context) {
 <body>
   <div class="container">
     <header>
-      <div class="logo">⚡ AZAMAN <span>SHAZAM</span></div>
+      <div class="logo">⚡ AZAMAN <span>ENGINE</span></div>
       <div class="badges">
         <div class="badge green">🛡️ Zero-Disk RAM (32MB)</div>
         <div class="badge purple" id="laya-badge">⚡ Laya AI Ready</div>
@@ -251,7 +251,7 @@ func HandleDashboard(c *gin.Context) {
       <div class="upload-desc">Supports PDF (Password-locked or Plain), CSV, XLSX (OPay, GTBank, Kuda, Moniepoint, Geegpay USD)</div>
       <div class="form-row" onclick="event.stopPropagation()">
         <input type="password" id="pdfPassword" class="input-field" placeholder="PDF Password (if locked, e.g. phone/acct)" />
-        <button class="btn" id="uploadBtn" onclick="uploadStatement()">Shazam Statement ⚡</button>
+        <button class="btn" id="uploadBtn" onclick="uploadStatement()">Check Statement ⚡</button>
       </div>
     </div>
     <div id="spinner"></div>

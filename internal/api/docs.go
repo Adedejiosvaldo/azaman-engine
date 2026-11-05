@@ -47,7 +47,7 @@ func HandleOpenAPISpec(c *gin.Context) {
 	spec := gin.H{
 		"openapi": "3.0.3",
 		"info": gin.H{
-			"title":       "Azaman Shazam Extraction Engine",
+			"title":       "Azaman Extraction Engine",
 			"description": "Ephemeral, sub-second financial intelligence engine built to decode cryptic Nigerian banking memos, spotlight silent cash leaks, and compute runway.",
 			"version":     "1.0.0",
 		},

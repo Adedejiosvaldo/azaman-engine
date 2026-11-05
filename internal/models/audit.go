@@ -108,6 +108,9 @@ type InternalTransfersReport struct {
 	SavingsWithdrawal float64 `json:"savings_withdrawals"`
 	NetSaved          float64 `json:"net_saved"`
 	Count             int     `json:"count"`
+	// CrossAccountPairs counts transfers matched between two uploaded statements (debit in one,
+	// same-amount credit in the other), which are dropped from spend and income.
+	CrossAccountPairs int `json:"cross_account_pairs"`
 }
 
 // RecurringPayment is a same-recipient, similar-amount, regular-interval series.
@@ -226,6 +229,25 @@ type AuditReport struct {
 	Transactions  []DecodedTransaction    `json:"transactions"`
 	BankDetected  string                  `json:"bank_detected"`
 	AuditMeta     AuditMeta               `json:"audit_meta"`
+	// Accounts lists every statement in the audit, one entry per uploaded file.
+	Accounts []AccountSummary `json:"accounts"`
+}
+
+// AccountSummary is one uploaded statement inside an audit: where it came from and its own totals.
+// Inflow and outflow exclude internal moves, including transfers to the holder's other accounts.
+type AccountSummary struct {
+	Label          string         `json:"label"`
+	Bank           string         `json:"bank"`
+	AccountHolder  string         `json:"account_holder,omitempty"`
+	FileFormat     string         `json:"file_format"`
+	Transactions   int            `json:"transactions"`
+	Inflow         float64        `json:"inflow"`
+	Outflow        float64        `json:"outflow"`
+	ClosingBalance float64        `json:"closing_balance"`
+	Currency       string         `json:"currency"`
+	PeriodStart    string         `json:"period_start"`
+	PeriodEnd      string         `json:"period_end"`
+	Check          StatementCheck `json:"statement_check"`
 }
 
 // PersonReview is a counterparty the engine is unsure about (family/friend vs vendor), ranked by
@@ -274,6 +296,9 @@ type SpendingBucket struct {
 type SpendingMix struct {
 	Total   float64          `json:"total"`
 	Buckets []SpendingBucket `json:"buckets"`
+	// Levies is the part of the drains bucket that is a legal levy (EMTL, stamp duty, cyber levy).
+	// It stays in the leak total but costs no grade points, since nobody can avoid it.
+	Levies float64 `json:"levies,omitempty"`
 }
 
 // MonthlyFlow is one calendar month of real inflow and outflow (internal moves excluded).
@@ -284,7 +309,9 @@ type MonthlyFlow struct {
 	Outflow float64 `json:"outflow"`
 	Net     float64 `json:"net"`
 	Count   int     `json:"count"`
-	Partial bool    `json:"partial"` // the statement covers only part of this month
+	Partial bool    `json:"partial"`         // the statement covers only part of this month
+	Grade   string  `json:"grade,omitempty"` // this month on its own, graded the same way
+	Score   int     `json:"score,omitempty"`
 }
 
 // MonthlyReport is the month-by-month cashflow with simple streak stats.
@@ -306,6 +333,7 @@ type GradeFactor struct {
 	Value      float64 `json:"value"`
 	Detail     string  `json:"detail"`
 	Tip        string  `json:"tip"`
+	TipAmount  float64 `json:"tip_amount,omitempty"` // the amount in Tip: per month, or the total buffer for runway
 }
 
 // FinancialGrade is a letter grade (A+ to F) with the factors behind it and the next step up.
@@ -318,6 +346,8 @@ type FinancialGrade struct {
 	PointsToNext  float64       `json:"points_to_next,omitempty"`
 	Focus         string        `json:"focus,omitempty"` // key of the factor with the most points to gain
 	FocusTip      string        `json:"focus_tip,omitempty"`
-	LowConfidence bool          `json:"low_confidence"` // statement too short or too sparse to judge
+	FocusAmount   float64       `json:"focus_amount,omitempty"`
+	Currency      string        `json:"currency,omitempty"` // currency the grade was worked out in
+	LowConfidence bool          `json:"low_confidence"`     // statement too short or too sparse to judge
 	Note          string        `json:"note,omitempty"`
 }
