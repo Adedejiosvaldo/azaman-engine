@@ -12,6 +12,8 @@ services:
     environment:
       # Only these origins may call the API from a browser (the dashboard itself is same-origin)
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://${DOMAIN:?set DOMAIN in deploy/.env}}
+      # Optional: turns on GET /api/v1/stats (counts only) for "Authorization: Bearer <token>"
+      STATS_TOKEN: ${STATS_TOKEN:-}
     expose:
       - "8080"          # reachable by Caddy only; no host port published
 

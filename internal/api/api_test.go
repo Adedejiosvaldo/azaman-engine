@@ -270,3 +270,106 @@ func TestAuditOPayStatement(t *testing.T) {
 		t.Errorf("expected EMTL / USSD bank charges to be detected")
 	}
 }
+
+func TestAuditMultipleStatements(t *testing.T) {
+	router := SetupRouter()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for _, name := range []string{"gtbank_statement.csv", "kuda_statement.csv"} {
+		content, err := os.ReadFile(filepath.Join("..", "..", "testdata", name))
+		if err != nil {
+			t.Fatalf("failed to read %s: %v", name, err)
+		}
+		part, err := writer.CreateFormFile("statements", name)
+		if err != nil {
+			t.Fatalf("failed to create form file: %v", err)
+		}
+		part.Write(content)
+	}
+	writer.Close()
+
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/shazam/audit", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var report models.AuditReport
+	if err := json.Unmarshal(w.Body.Bytes(), &report); err != nil {
+		t.Fatalf("failed to parse audit report: %v", err)
+	}
+	if len(report.Accounts) != 2 {
+		t.Fatalf("expected 2 accounts, got %d", len(report.Accounts))
+	}
+	if report.Accounts[0].Label != "GTBank" || report.Accounts[1].Label != "Kuda Bank" {
+		t.Errorf("unexpected labels: %q, %q", report.Accounts[0].Label, report.Accounts[1].Label)
+	}
+	total := 0
+	for _, a := range report.Accounts {
+		total += a.Transactions
+	}
+	if total != len(report.Transactions) {
+		t.Errorf("account row counts (%d) should add up to all transactions (%d)", total, len(report.Transactions))
+	}
+	for _, tx := range report.Transactions {
+		if tx.Account == "" {
+			t.Fatalf("every transaction should carry its account label")
+		}
+	}
+}
+
+func TestAuditSingleStatementHasOneAccount(t *testing.T) {
+	router := SetupRouter()
+	content, _ := os.ReadFile(filepath.Join("..", "..", "testdata", "opay_statement.csv"))
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("statement", "opay_statement.csv")
+	part.Write(content)
+	writer.Close()
+
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/shazam/audit", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var report models.AuditReport
+	json.Unmarshal(w.Body.Bytes(), &report)
+	if len(report.Accounts) != 1 || report.Accounts[0].Label != report.BankDetected {
+		t.Errorf("single upload should report one account labelled by bank, got %+v", report.Accounts)
+	}
+}
+
+func TestEventsOnlyAcceptKnownNames(t *testing.T) {
+	router := SetupRouter()
+	for name, want := range map[string]int{"grade_shared": http.StatusNoContent, "my_bank_password": http.StatusBadRequest} {
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/events", bytes.NewBufferString(`{"event":"`+name+`"}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != want {
+			t.Errorf("event %q: expected %d, got %d", name, want, w.Code)
+		}
+	}
+}
+
+func TestStatsNeedsToken(t *testing.T) {
+	router := SetupRouter()
+	t.Setenv("STATS_TOKEN", "secret")
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/stats", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without token, got %d", w.Code)
+	}
+	req.Header.Set("Authorization", "Bearer secret")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 with token, got %d", w.Code)
+	}
+}

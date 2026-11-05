@@ -1,4 +1,4 @@
-# Azaman Engine (Shazam for Bank Statements)
+# Azaman Engine
 
 > **Ephemeral, sub-second financial intelligence engine designed to decode cryptic Nigerian banking memos, spotlight silent cash leaks (Midnight food/rides, Urgent 2k, duplicate debits, clearinghouse levies), and compute runway — with strict zero-disk persistence.**
 
@@ -13,7 +13,7 @@
 
 Nigerian bank statements (OPay, PalmPay, GTBank, Kuda, Moniepoint, Access, Zenith, First Bank, UBA, Wema/ALAT, Fidelity, Sterling, FCMB, Stanbic IBTC, Geegpay) are notoriously noisy — filled with clearinghouse settlement routing codes (`NIP/DR/`, `SENT 01655551`), 20-digit transaction session IDs, and truncated narrations.
 
-**Azaman Engine** acts as a *"Shazam for Financial Statements"*:
+**Azaman Engine** reads any statement and tells you who chopped your money:
 - Takes any statement (PDF, CSV, Excel, TSV) directly into memory.
 - Strips clearinghouse noise, masks PII, and identifies merchants in sub-microsecond time.
 - Employs coordinate-geometry table parsing to reconstruct multi-line PDF tables without horizontal text collapse.
@@ -27,7 +27,7 @@ Nigerian bank statements (OPay, PalmPay, GTBank, Kuda, Moniepoint, Access, Zenit
 | **OPay Annual Statement (PDF)** | **559 pages (9,931 txs)** | **4.2 seconds** | **0 bytes** | ₦4.12M leaks (820 Urgent 2k, 196 duplicate debits) |
 | **OPay Export (CSV)** | **146 transactions** | **8 milliseconds** | **0 bytes** | Chowdeck double-charge (₦5,148) flagged; OWealth savings & self-transfers excluded from burn |
 | **Geegpay USD Statement (CSV)** | **12 transactions** | **2 milliseconds** | **0 bytes** | AWS, GitHub, Cursor classified as Tax Deductibles |
-| **Single Memo Shazam (`/decode-memo`)** | **1 transaction** | **0.05 milliseconds** | **0 bytes** | Cleans noise, extracts merchant, tags category |
+| **Single Memo Decode (`/decode-memo`)** | **1 transaction** | **0.05 milliseconds** | **0 bytes** | Cleans noise, extracts merchant, tags category |
 
 ---
 
@@ -85,7 +85,7 @@ Azaman enforces strict bank-grade privacy compliance:
 │                                     │                                  │
 │                                     ▼                                  │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                     Shazam Intelligence Core                     │  │
+│  │                     Memo Intelligence Core                       │  │
 │  │   - NIBSS / Clearinghouse Tag Stripper & PII Masker              │  │
 │  │   - Merchant Rules Registry (Tech, Commute, Food, Wealth)        │  │
 │  │   - Disambiguation: P2P vs. Commercial Vendor vs. POS Agent      │  │
@@ -130,7 +130,7 @@ Standard PDF extractors collapse text horizontally, destroying multi-column tabl
 
 ---
 
-### B. The Shazam Normalizer & PII Masker
+### B. The Memo Normalizer & PII Masker
 *Source: [`internal/shazam/cleaner.go`](internal/shazam/cleaner.go)*
 
 Cleans banking noise in $< 1\text{ microsecond}$ using deterministic regex compilation:
@@ -283,8 +283,8 @@ azaman-engine/
 │   └── shazam/
 │       ├── cleaner.go              # Clearinghouse noise & PII stripper
 │       ├── dictionary.go           # Curated Nigerian & global merchant registry
-│       ├── matcher.go              # Shazam decoder & P2P disambiguator
-│       └── shazam_test.go          # Shazam decoder unit tests
+│       ├── matcher.go              # Memo decoder & P2P disambiguator
+│       └── shazam_test.go          # Memo decoder unit tests
 ├── sidecar/
 │   ├── categories.json             # Shared category taxonomy (Go + sidecar)
 │   ├── laya_service.py             # FastAPI server with Laya router & bounded hashed cache

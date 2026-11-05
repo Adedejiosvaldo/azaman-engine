@@ -24,7 +24,9 @@ func GenerateAudit(
 	copy(txs, rawTxs)
 	DetectFeeVAT(txs)
 	reversalsReport := DetectReversals(txs)
+	crossPairs := MatchCrossAccountTransfers(txs, accountHolder)
 	internalReport := DetectSelfTransfers(txs, accountHolder)
+	internalReport.CrossAccountPairs = crossPairs
 	peopleReview := ScorePeople(txs, accountHolder)
 	uncategorized := MarkUncategorized(txs)
 	recurring := DetectRecurring(txs)
@@ -120,7 +122,22 @@ func GenerateAudit(
 	// 7. Scorecard: spending buckets, month-by-month flow and the letter grade
 	spendingMix := BuildSpendingMix(enrichedTxs, leakByTx, internalReport.SavingsDeposits)
 	monthly := BuildMonthly(enrichedTxs)
-	grade := GradeAudit(summary, insights, spendingMix, periodDays, len(enrichedTxs))
+	// Naira and dollars can't be added up, so with several currencies only the main one is graded.
+	gradeCurrency, mixedCurrencies := mainCurrency(enrichedTxs)
+	gradeTxs := enrichedTxs
+	var grade models.FinancialGrade
+	if mixedCurrencies {
+		gradeTxs = onlyCurrency(enrichedTxs, gradeCurrency)
+		grade = gradeSubset(gradeTxs, leakByTx, recurring)
+		scope := "Graded on your " + gradeCurrency + " accounts only. Other currencies are not converted, so they are left out."
+		if grade.Note != "" {
+			scope += " " + grade.Note
+		}
+		grade.Note = scope
+	} else {
+		grade = GradeAudit(summary, insights, spendingMix, periodDays, len(enrichedTxs))
+	}
+	GradeMonths(&monthly, gradeTxs, leakByTx, recurring)
 
 	// 8. Audit metadata
 	executionTimeMs := time.Since(startTime).Milliseconds()

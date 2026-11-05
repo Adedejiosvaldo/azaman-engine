@@ -65,6 +65,9 @@ type DecodedTransaction struct {
 	Counterparty  string `json:"counterparty,omitempty"`
 	Purpose       string `json:"purpose,omitempty"`
 	DecisionBasis string `json:"decision_basis,omitempty"`
+	// Account is the label of the statement this row came from ("OPay", "GTBank 2"), so a
+	// multi-statement audit can be filtered by account.
+	Account string `json:"account,omitempty"`
 }
 
 // IsSpend reports whether the transaction is a real outflow (a debit that is not internal).

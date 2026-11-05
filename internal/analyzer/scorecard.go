@@ -75,6 +75,7 @@ func BuildSpendingMix(txs []models.DecodedTransaction, leakIDs map[string]float6
 		count  int
 		cats   map[string]*models.CategoryBreakdown
 	}
+	var levies float64
 	aggs := make(map[string]*bucketAgg, len(spendingBuckets))
 	for _, b := range spendingBuckets {
 		aggs[b.key] = &bucketAgg{cats: map[string]*models.CategoryBreakdown{}}
@@ -100,7 +101,11 @@ func BuildSpendingMix(txs []models.DecodedTransaction, leakIDs map[string]float6
 		if category == "" {
 			category = "Uncategorized"
 		}
-		add(spendBucket(tx, leakIDs), category, tx.Debit, 1)
+		bucket := spendBucket(tx, leakIDs)
+		add(bucket, category, tx.Debit, 1)
+		if bucket == "drains" && isStatutoryLevy(tx) {
+			levies += tx.Debit
+		}
 	}
 	if savingsDeposits > 0 {
 		add("builders", "Savings deposits", savingsDeposits, 0)
@@ -111,7 +116,7 @@ func BuildSpendingMix(txs []models.DecodedTransaction, leakIDs map[string]float6
 		total += agg.amount
 	}
 
-	mix := models.SpendingMix{Total: round2(total)}
+	mix := models.SpendingMix{Total: round2(total), Levies: round2(levies)}
 	for _, b := range spendingBuckets {
 		agg := aggs[b.key]
 		bucket := models.SpendingBucket{
@@ -272,7 +277,8 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 	income := summary.TotalInflow - insights.BettingWinnings
 	hasIncome := income > 0
 	months := math.Max(periodDays/daysPerMonth, 1)
-	perMonth := func(total float64) string { return sym + money(math.Max(total, 0)/months) }
+	perMonth := func(total float64) float64 { return math.Round(math.Max(total, 0) / months) }
+	cash := func(v float64) string { return sym + money(v) }
 
 	var factors []models.GradeFactor
 
@@ -287,8 +293,9 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		} else {
 			kept.Detail = fmt.Sprintf("You spent %.1f%% more than came in.", -margin)
 		}
+		kept.TipAmount = perMonth((targetKeptPct - margin) / 100 * income)
 		kept.Tip = fmt.Sprintf("Keep about %s more each month to hold on to %.0f%% of your income.",
-			perMonth((targetKeptPct-margin)/100*income), targetKeptPct)
+			cash(kept.TipAmount), targetKeptPct)
 	} else {
 		kept.Detail = "No income on this statement to compare spending against."
 	}
@@ -301,8 +308,9 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		saving.Value = round2(rate)
 		saving.Points = clamp01(rate/targetSavingsPct) * saving.MaxPoints
 		saving.Detail = fmt.Sprintf("%.1f%% of income went into savings, investments or ajo.", rate)
+		saving.TipAmount = perMonth((targetSavingsPct - rate) / 100 * income)
 		saving.Tip = fmt.Sprintf("Move %s a month into a savings wallet or ajo to reach %.0f%%.",
-			perMonth((targetSavingsPct-rate)/100*income), targetSavingsPct)
+			cash(saving.TipAmount), targetSavingsPct)
 	} else {
 		saving.Detail = "No income on this statement to measure savings against."
 	}
@@ -317,11 +325,17 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 				bucket = b
 			}
 		}
-		share := bucket.Percentage
+		// Legal levies stay in the drains bucket and the leak total, but are not scored.
+		share := round2(math.Max(bucket.Percentage-mix.Levies/mix.Total*100, 0))
 		drains.Value = share
 		drains.Points = clamp01((zeroDrainsPct-share)/(zeroDrainsPct-targetDrainsPct)) * drains.MaxPoints
 		drains.Detail = fmt.Sprintf("%.1f%% of your spending went to drains.", share)
-		drains.Tip = fmt.Sprintf("Cut drains by %s a month", perMonth((share-targetDrainsPct)/100*mix.Total))
+		if mix.Levies > 0 {
+			drains.Detail = fmt.Sprintf("%.1f%% of your spending went to drains (%s of government levies not counted).",
+				share, cash(mix.Levies))
+		}
+		drains.TipAmount = perMonth((share - targetDrainsPct) / 100 * mix.Total)
+		drains.Tip = fmt.Sprintf("Cut drains by %s a month", cash(drains.TipAmount))
 		if len(bucket.TopCategories) > 0 {
 			drains.Tip += fmt.Sprintf(", starting with %s", bucket.TopCategories[0].Category)
 		}
@@ -346,8 +360,9 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		default:
 			runway.Detail = fmt.Sprintf("Your balance covers %.1f months of spending.", r)
 		}
-		runway.Tip = fmt.Sprintf("Build %s%s more buffer to reach %.0f months of runway.",
-			sym, money(math.Max(targetRunway-r, 0)*burn), targetRunway)
+		runway.TipAmount = math.Round(math.Max(targetRunway-r, 0) * burn)
+		runway.Tip = fmt.Sprintf("Build %s more buffer to reach %.0f months of runway.",
+			cash(runway.TipAmount), targetRunway)
 	} else {
 		runway.Detail = "No spending to measure runway against."
 	}
@@ -364,21 +379,23 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		} else {
 			debt.Detail = fmt.Sprintf("Loan repayments take %.1f%% of income.", ratio)
 		}
+		debt.TipAmount = perMonth((ratio - targetDebtPct) / 100 * income)
 		debt.Tip = fmt.Sprintf("Bring loan repayments down by %s a month and avoid new loan apps.",
-			perMonth((ratio-targetDebtPct)/100*income))
+			cash(debt.TipAmount))
 	} else {
 		debt.Detail = "No income on this statement to compare repayments against."
 	}
 	factors = append(factors, debt)
 
 	var earned, possible, bestGap float64
-	grade := models.FinancialGrade{Factors: factors}
+	grade := models.FinancialGrade{Factors: factors, Currency: summary.Currency}
 	for i := range factors {
 		f := &grade.Factors[i]
 		f.Points = round1(f.Points)
 		if !f.Applicable {
 			f.Points = 0
 			f.Tip = ""
+			f.TipAmount = 0
 			continue
 		}
 		earned += f.Points
@@ -386,12 +403,14 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		gap := f.MaxPoints - f.Points
 		if gap < 0.5 {
 			f.Tip = ""
+			f.TipAmount = 0
 			continue
 		}
 		if gap > bestGap {
 			bestGap = gap
 			grade.Focus = f.Key
 			grade.FocusTip = f.Tip
+			grade.FocusAmount = f.TipAmount
 		}
 	}
 
