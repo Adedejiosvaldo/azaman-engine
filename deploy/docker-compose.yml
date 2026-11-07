@@ -8,7 +8,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=64m
-    mem_limit: 3g
+    mem_limit: 2g     # Laya now loads one checkpoint (~1.4GB measured), not all three (~3GB)
     environment:
       # Only these origins may call the API from a browser (the dashboard itself is same-origin)
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://${DOMAIN:?set DOMAIN in deploy/.env}}

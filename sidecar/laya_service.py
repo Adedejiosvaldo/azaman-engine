@@ -31,11 +31,24 @@ URGENT_2K_MIN, URGENT_2K_MAX = 1000.0, 15000.0
 HAS_LAYA = False
 router = None
 
+# Laya ships three checkpoints (~1.16B parameters together). Bank memos only ever need one, so
+# only that one is loaded: about a third of the memory of preloading all three.
+LAYA_MODEL = os.getenv("LAYA_MODEL", "english")
+# The model answers only when its top category beats the runner-up by this much; closer calls are
+# left to the rules (and end up "Uncategorized" for the user to sort) instead of being guessed.
+# 0.7 measured best on testdata/memo_eval.jsonl (go run ./cmd/memo-eval): lower margins let through
+# as many wrong answers as right ones.
+LAYA_MIN_MARGIN = float(os.getenv("LAYA_MIN_MARGIN", "0.70"))
+# Confidence given to an accepted answer: above the engine's generic heuristics (0.70-0.89),
+# below its dictionary matches (0.90+), so the AI fills gaps and never overrules a known merchant.
+LAYA_ACCEPT_CONFIDENCE = 0.895
+
 if os.getenv("LAYA_DISABLE") != "1":
     try:
         from laya import Router
-        print("[LAYA-SIDECAR] Loading Laya Router checkpoints into memory...")
-        router = Router(preload=True)
+        print(f"[LAYA-SIDECAR] Loading Laya checkpoint '{LAYA_MODEL}' into memory...")
+        router = Router(max_loaded=1)
+        router.preload([LAYA_MODEL])
         HAS_LAYA = True
         print("[LAYA-SIDECAR] Laya Router successfully preloaded!")
     except Exception as e:
@@ -67,6 +80,7 @@ class DecisionResult(BaseModel):
     is_urgent_2k: bool
     is_tax_deductible: bool
     is_purchase: bool = False
+    margin: Optional[float] = None  # top category probability minus the runner-up (model answers only)
 
 
 CATEGORY_QUESTIONS = {
@@ -75,21 +89,9 @@ CATEGORY_QUESTIONS = {
         "instructions": "Classify this Nigerian bank transfer or payment memo into the most appropriate category.",
         "criteria": ASSIGNABLE,
     },
-    "is_silent_leak": {
-        "type": "noul",
-        "instructions": "Is this a non-essential discretionary cash leak or late night drain?"
-    },
-    "is_urgent_2k": {
-        "type": "noul",
-        "instructions": "Is this an 'urgent 2k' micro-favor or small personal transfer under 15,000 NGN?"
-    },
     "is_purchase": {
         "type": "noul",
         "instructions": "Was this payment to a person for something bought (goods, food items, a service), rather than money given as support, a gift or a favour?"
-    },
-    "is_tax_deductible": {
-        "type": "noul",
-        "instructions": "Is this a legitimate business expense such as software, coworking, hardware, or corporate commute?"
     }
 }
 
@@ -234,27 +236,40 @@ def build_decision(item: MemoItem, text: str, category: str, confidence: float,
     }
 
 
-LAYA_CONFIDENCE_SCALE = 0.7
-
-
-def laya_decision(item: MemoItem, text: str) -> Dict[str, Any]:
+def laya_state(item: MemoItem, text: str) -> Dict[str, Any]:
     state = {"body": text, "amount": item.amount, "currency": item.currency,
              "direction": "credit" if item.is_credit else "debit"}
     if item.hour is not None:
         state["hour"] = item.hour
-    pred = router.predict(state, CATEGORY_QUESTIONS)
-    answers = pred.get("answers", {})
-    return build_decision(
-        item, text,
-        category=answers.get("category", {}).get("choice", DEFAULT_CATEGORY),
-        # The model is overconfident on Nigerian transfer memos ("Curtains" -> Ajo at 1.0), so its
-        # score is scaled below every Go rule and heuristic: Laya fills gaps, it does not overrule.
-        confidence=min(answers.get("category", {}).get("confidence", 0.0), 1.0) * LAYA_CONFIDENCE_SCALE,
-        leak_prob=answers.get("is_silent_leak", {}).get("noul", 0.0),
-        u2k_prob=answers.get("is_urgent_2k", {}).get("noul", 0.0),
-        tax_prob=answers.get("is_tax_deductible", {}).get("noul", 0.0),
-        purchase_prob=answers.get("is_purchase", {}).get("noul", 0.0),
-    )
+    return state
+
+
+def from_answers(item: MemoItem, text: str, answers: Dict[str, Any]) -> Dict[str, Any]:
+    cat = answers.get("category", {})
+    probs = sorted((float(v) for v in (cat.get("probabilities") or {}).values()), reverse=True)
+    top = probs[0] if probs else float(cat.get("confidence", 0.0))
+    second = probs[1] if len(probs) > 1 else 0.0
+    margin = round(top - second, 4)
+    if margin < LAYA_MIN_MARGIN:
+        # Too close to call: answer with zero confidence so the engine keeps its own result.
+        decision = build_decision(item, text, cat.get("choice", DEFAULT_CATEGORY), 0.0)
+    else:
+        decision = build_decision(
+            item, text,
+            category=cat.get("choice", DEFAULT_CATEGORY),
+            confidence=LAYA_ACCEPT_CONFIDENCE,
+            purchase_prob=answers.get("is_purchase", {}).get("noul", 0.0),
+        )
+    decision["margin"] = margin
+    return decision
+
+
+def laya_decisions(pending: List[tuple]) -> List[Dict[str, Any]]:
+    """Answers every (item, text) in one batched pass: memos share forward passes."""
+    requests = [{"state": laya_state(item, text), "questions": CATEGORY_QUESTIONS, "model": LAYA_MODEL}
+                for item, text in pending]
+    preds = router.predict_batch(requests)
+    return [from_answers(item, text, pred.get("answers", {})) for (item, text), pred in zip(pending, preds)]
 
 
 # ==================== ENDPOINTS ====================
@@ -262,7 +277,8 @@ def laya_decision(item: MemoItem, text: str) -> Dict[str, Any]:
 def health():
     return {
         "status": "ok",
-        "model": "laya-typed-decisions" if HAS_LAYA else "fallback-classifier",
+        "model": f"laya-{LAYA_MODEL}" if HAS_LAYA else "fallback-classifier",
+        "min_margin": LAYA_MIN_MARGIN,
         "engine": "Laya AI System 1 Decision Model",
         "is_native_laya": HAS_LAYA,
         "version": app.version,
@@ -283,26 +299,34 @@ def classify_batch(req: BatchRequest) -> Dict[str, Any]:
     start_time = time.time()
     results: List[DecisionResult] = []
 
-    for item in req.items:
+    decided: Dict[int, Dict[str, Any]] = {}
+    pending: List[tuple] = []
+    pending_idx: List[int] = []
+    for i, item in enumerate(req.items):
         text = item.memo or item.raw_memo or ""
-        key = DecisionCache.key(item, text)
-
-        decision = memo_cache.get(key)
-        if decision is None:
-            if HAS_LAYA and router is not None:
-                try:
-                    decision = laya_decision(item, text)
-                except Exception as e:  # never fail the batch because one prediction broke
-                    print(f"[LAYA-SIDECAR] predict failed, using fallback: {e}")
-                    decision = fallback_decision(item, text)
-            else:
-                decision = fallback_decision(item, text)
-            # Merchant names are per-memo text, so they are not cached
-            memo_cache.put(key, {k: v for k, v in decision.items() if k != "merchant"})
+        cached = memo_cache.get(DecisionCache.key(item, text))
+        if cached is not None:
+            decided[i] = {**cached, "merchant": clean_title(text)}
         else:
-            decision = {**decision, "merchant": clean_title(text)}
+            pending.append((item, text))
+            pending_idx.append(i)
 
-        results.append(DecisionResult(id=item.id, **decision))
+    if pending:
+        if HAS_LAYA and router is not None:
+            try:
+                fresh = laya_decisions(pending)
+            except Exception as e:  # never fail the batch because the model broke
+                print(f"[LAYA-SIDECAR] predict failed, using fallback: {e}")
+                fresh = [fallback_decision(item, text) for item, text in pending]
+        else:
+            fresh = [fallback_decision(item, text) for item, text in pending]
+        for i, (item, text), decision in zip(pending_idx, pending, fresh):
+            # Merchant names are per-memo text, so they are not cached
+            memo_cache.put(DecisionCache.key(item, text), {k: v for k, v in decision.items() if k != "merchant"})
+            decided[i] = decision
+
+    for i, item in enumerate(req.items):
+        results.append(DecisionResult(id=item.id, **decided[i]))
 
     elapsed_ms = (time.time() - start_time) * 1000
     return {

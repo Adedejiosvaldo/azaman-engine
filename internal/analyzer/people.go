@@ -108,6 +108,15 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		}
 	}
 
+	// A family surname is shared by several people the holder pays ("Kemi Bakare", "Seun
+	// Bakare"); a first name shared with one stranger ("Chidi Tunde") is a coincidence.
+	sharedBy := map[string]int{}
+	for _, p := range people {
+		for _, t := range sharedTokens(p.tokens, holder) {
+			sharedBy[t]++
+		}
+	}
+
 	var review []models.PersonReview
 	for _, p := range people {
 		sent := p.count
@@ -117,8 +126,17 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		sized := p.round + p.odd // payments of ₦1,000+ whose roundness is meaningful
 		score, reasons := 0.0, []string{}
 		if shared := sharedTokens(p.tokens, holder); len(shared) > 0 && len(shared) < len(p.tokens) {
-			score += 2.5
-			reasons = append(reasons, "shares your name ("+strings.Title(strings.Join(shared, ", "))+")")
+			family := false
+			for _, t := range shared {
+				family = family || sharedBy[t] >= 2
+			}
+			if family {
+				score += 2.5
+				reasons = append(reasons, "shares your family name ("+strings.Title(strings.Join(shared, ", "))+")")
+			} else {
+				score += 1
+				reasons = append(reasons, "shares one of your names ("+strings.Title(strings.Join(shared, ", "))+")")
+			}
 		}
 		if p.receivedFrom {
 			score += 1.5

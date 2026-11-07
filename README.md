@@ -53,7 +53,7 @@ Azaman enforces strict bank-grade privacy compliance:
 | Storage limitation | Zero-disk design; buffers are scrubbed when the response completes. Nothing is retained after the request. |
 | Integrity & confidentiality | NUBAN account and phone numbers are masked (`0123****89`, `0803****567`) before any output or AI call. |
 | Purpose limitation | Data is used only to produce the audit returned to the uploader. |
-| Cross-border transfer | The optional Laya sidecar runs locally (127.0.0.1); only masked, noise-stripped memos (max 5 per audit) are sent to it. |
+| Cross-border transfer | The optional Laya sidecar runs locally (127.0.0.1); only cleaned memos (no account numbers, bank names or holder name; never plain transfers to people; max 25 per audit) are sent to it. |
 
 > Deployers remain the data controller: they must still provide a privacy notice, a lawful basis (usually consent), and TLS in transit.
 
@@ -207,9 +207,13 @@ $$\text{Runway (Months)} = \frac{\text{Closing Balance}}{\text{Weighted Burn}}$$
 ### E. Laya AI Decision Pass (Hybrid AI Sidecar)
 *Source: [`internal/ai/laya_client.go`](internal/ai/laya_client.go) & [`sidecar/laya_service.py`](sidecar/laya_service.py)*
 
-For ambiguous memos where confidence $< 0.90$:
-- **Deduplication**: Memos are deduplicated by clean text before querying Laya.
-- **Batch Capping**: Capped at $\le 5$ items per statement audit to guarantee sub-second completion.
+For ambiguous memos where confidence $< 0.90$ ([`internal/ai/pass.go`](internal/ai/pass.go)):
+- **What is sent**: the typed purpose, or the business name for transfers to businesses, or the merchant memo. Plain transfers to people are never sent. Text is cleaned first ([`internal/ai/clean.go`](internal/ai/clean.go)): no account numbers, bank names or the account holder's name.
+- **Deduplication and ranking**: memos are grouped by cleaned text, and the ones with the most money go first, up to 25 per audit in one batched call.
+- **Time limit and backoff**: 4s per call. After a timeout or error the engine stops asking for 5 minutes and uses its rules, so a slow model costs one wait, not one per audit.
+- **One checkpoint**: the sidecar loads only `LAYA_MODEL` (default `english`, ~1.4GB) instead of all three Laya checkpoints (~3GB).
+- **Abstains on close calls**: an answer is used only when the top category beats the runner-up by `LAYA_MIN_MARGIN` (default 0.7, measured best). Accepted answers get confidence 0.895: above the generic heuristics, below dictionary matches.
+- **Measuring it**: `go run ./cmd/memo-eval [-laya http://127.0.0.1:8001] [-margin 0.7] [-split dev|test] [-v]` scores the rules, and rules + AI, on [`testdata/memo_eval.jsonl`](testdata/memo_eval.jsonl) (regenerate with `python -I testdata/memo_eval_build.py`). On a CPU the model takes about 4s per memo; the sidecar's fallback rules (`LAYA_DISABLE=1`) scored as well or better on that set, instantly.
 - **Shared Taxonomy**: [`sidecar/categories.json`](sidecar/categories.json) is the single category list for both sides. Laya may only answer with `assignable` categories, and the Go test `TestCategoriesMatchSidecar` fails if the engine uses a category missing from the file.
 - **Guarded Overrides**: Fees, savings and loan rows are never sent to Laya. A Laya answer only replaces the rule-based one when its confidence is higher. Go also sends the hour of day (when known), direction and currency.
 - **Ephemeral Sidecar Cache**: A bounded LRU (10k entries, 1h TTL; `LAYA_CACHE_MAX`, `LAYA_CACHE_TTL`). Keys are SHA-256 hashes and values hold only the decision, so no memo text or names are retained. `DELETE /cache` empties it, and `/health` reports its size.
@@ -251,6 +255,7 @@ azaman-engine/
 ├── internal/
 │   ├── ai/
 │   │   ├── laya_client.go          # Bounded Go client for Laya decision sidecar
+│   │   ├── pass.go / clean.go      # AI pass: what is sent, cleaning, ranking, applying answers
 │   │   └── laya_client_test.go     # Client unit tests
 │   ├── analyzer/
 │   │   ├── analyzer_test.go        # Audit & leak tests

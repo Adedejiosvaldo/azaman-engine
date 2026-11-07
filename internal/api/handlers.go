@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -161,96 +161,9 @@ func HandleAudit(c *gin.Context) {
 	analyzer.ApplyContactLabels(decodedTxs, c.PostFormArray("vendor"), c.PostFormArray("family"), shazam.VendorCategory)
 	analyzer.ApplyPaymentLabels(decodedTxs, c.PostFormArray("payment_label"), shazam.VendorCategory)
 
-	// 6b. Optional Laya AI System 1 Decision Pass for Ambiguous/Low-Confidence Memos
-	layaClient := ai.GetLayaClient()
-	if layaClient.IsAvailable() {
-		var ambiguousItems []ai.LayaMemoItem
-		seenMemos := make(map[string]bool)
-		for _, tx := range decodedTxs {
-			cleanKey := strings.TrimSpace(strings.ToLower(tx.CleanMemo))
-			if cleanKey == "" {
-				cleanKey = strings.TrimSpace(strings.ToLower(tx.RawDescription))
-			}
-			if tx.Confidence < 0.90 && tx.Amount < 0 && layaEligible(tx) && !seenMemos[cleanKey] {
-				seenMemos[cleanKey] = true
-				ambiguousItems = append(ambiguousItems, ai.LayaMemoItem{
-					ID:       tx.ID,
-					Memo:     layaText(tx),
-					Amount:   math.Abs(tx.Amount),
-					RawMemo:  tx.RawDescription,
-					Hour:     knownHour(tx),
-					IsCredit: tx.Credit > 0,
-					Currency: tx.Currency,
-				})
-				// Cap batch to 5 items to guarantee sub-second responses
-				if len(ambiguousItems) >= 5 {
-					break
-				}
-			}
-		}
-
-		if len(ambiguousItems) > 0 {
-			if decisions, err := layaClient.ClassifyBatch(ambiguousItems); err == nil {
-				memoDecisions := make(map[string]ai.LayaDecision)
-				for _, item := range ambiguousItems {
-					if dec, ok := decisions[item.ID]; ok {
-						key := strings.TrimSpace(strings.ToLower(item.Memo))
-						if key == "" {
-							key = strings.TrimSpace(strings.ToLower(item.RawMemo))
-						}
-						memoDecisions[key] = dec
-					}
-				}
-
-				for i := range decodedTxs {
-					tx := &decodedTxs[i]
-					key := strings.TrimSpace(strings.ToLower(tx.CleanMemo))
-					if key == "" {
-						key = strings.TrimSpace(strings.ToLower(tx.RawDescription))
-					}
-					dec, ok := decisions[tx.ID]
-					if !ok {
-						dec, ok = memoDecisions[key]
-					}
-					// Only override when Laya is more confident than the rules, and never for rows
-					// whose type is already certain (fees, savings, loans).
-					if ok && layaEligible(*tx) && dec.Confidence > tx.Confidence {
-						if tx.Counterparty != "" {
-							tx.DecisionBasis = "ai" // person scoring leaves AI-decided rows alone
-						}
-						if dec.Category != "" {
-							tx.Category = dec.Category
-						}
-						if dec.Classification != "" {
-							tx.Classification = dec.Classification
-						}
-						if dec.Merchant != "" && tx.Confidence < 0.85 {
-							tx.Merchant = dec.Merchant
-						}
-						if dec.Confidence > tx.Confidence {
-							tx.Confidence = dec.Confidence
-						}
-						// Laya's "silent leak" is about discretionary spend, not time of day: only
-						// count it as a midnight leak when the row's time is known to be late.
-						if h := knownHour(*tx); dec.IsSilentLeak && h != nil && (*h >= 22 || *h <= 3) {
-							tx.Flags.IsMidnightLeak = true
-						}
-						if dec.IsUrgent2k {
-							tx.Flags.IsUrgent2k = true
-						}
-						if dec.IsTaxDeductible {
-							tx.Flags.IsTaxDeductible = true
-						}
-						// "Bought, not given": a payment to a person for goods or a service
-						if dec.IsPurchase && tx.Counterparty != "" && tx.Debit > 0 {
-							tx.Category = shazam.VendorCategory
-							tx.Classification = "Personal Purchase"
-							tx.Flags.IsUrgent2k = false
-						}
-					}
-				}
-			}
-		}
+	// 6b. Optional AI pass (Laya sidecar) for memos the rules are unsure about
+	if stats := ai.ApplyDecisions(decodedTxs, ai.GetLayaClient(), accountHolder); stats.Sent > 0 {
+		log.Printf("[AZAMAN-AI] unsure=%d sent=%d changed=%d", stats.Candidates, stats.Sent, stats.Changed)
 	}
 
 	// 7. Leak Analysis & Runway Calculation
@@ -434,10 +347,16 @@ func HandleHealth(c *gin.Context) {
 		return float64(b) / 1024 / 1024
 	}
 
-	layaAvailable := ai.GetLayaClient().IsAvailable()
+	// "connected": the model answers; "rules_only": the sidecar runs its fallback rules
+	// (LAYA_DISABLE=1 or the model failed to load); "offline_fallback": not reachable, or paused
+	// after a timeout, so the engine uses its own rules.
+	layaClient := ai.GetLayaClient()
 	layaStatus := "offline_fallback"
-	if layaAvailable {
+	if layaClient.IsAvailable() {
 		layaStatus = "connected"
+		if layaClient.Model() == "fallback-classifier" {
+			layaStatus = "rules_only"
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -448,7 +367,8 @@ func HandleHealth(c *gin.Context) {
 		"ai_decision_engine": gin.H{
 			"provider": "Laya AI System 1 Decision Model",
 			"status":   layaStatus,
-			"endpoint": ai.GetLayaClient().BaseURL,
+			"model":    layaClient.Model(),
+			"endpoint": layaClient.BaseURL,
 		},
 		"memory_mb": gin.H{
 			"alloc":       bToMb(m.Alloc),
@@ -470,31 +390,4 @@ func compactReport(r *models.AuditReport) {
 	for i := range r.CashLeaks.DuplicateDebits.Pairs {
 		r.CashLeaks.DuplicateDebits.Pairs[i].Transactions = nil
 	}
-}
-
-// layaEligible reports whether a transaction may be sent to, or reclassified by, the Laya sidecar.
-// A transfer to a person with no typed purpose is left to person scoring: Laya reads memo text,
-// and a bare name gives it nothing to go on (it guesses bills, loans or even betting).
-func layaEligible(tx models.DecodedTransaction) bool {
-	return !tx.Flags.IsBankFee && !tx.Flags.IsSavings && !tx.Flags.IsLoan && !tx.Flags.IsSelfTransfer &&
-		(tx.Counterparty == "" || tx.Purpose != "")
-}
-
-// knownHour returns the transaction's hour of day, or nil for date-only rows (parsed as 00:00:00).
-func knownHour(tx models.DecodedTransaction) *int {
-	t := tx.ParsedDate
-	if t.IsZero() || (t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0) {
-		return nil
-	}
-	h := t.Hour()
-	return &h
-}
-
-// layaText is what Laya reads: the typed purpose of a person-to-person transfer when there is one
-// (it carries the meaning; the name only adds noise), otherwise the cleaned memo.
-func layaText(tx models.DecodedTransaction) string {
-	if tx.Purpose != "" {
-		return tx.Purpose
-	}
-	return tx.CleanMemo
 }

@@ -116,19 +116,34 @@ class InputLimits(unittest.TestCase):
 
 
 class LayaConfidenceTest(unittest.TestCase):
-    def test_model_confidence_is_scaled_below_go_rules(self):
+    """The model answers only clear calls, and never above the engine's dictionary rules (0.9+)."""
+
+    def decide(self, probabilities):
         class FakeRouter:
-            def predict(self, state, questions):
-                return {"answers": {"category": {"choice": "Ajo & Thrift", "confidence": 1.0}}}
+            def predict_batch(self, requests):
+                top = max(probabilities, key=probabilities.get)
+                return [{"answers": {"category": {"choice": top, "probabilities": probabilities}}}
+                        for _ in requests]
 
         old = svc.router
         svc.router = FakeRouter()
         try:
-            item = svc.MemoItem(id="1", memo="Curtains", amount=35000)
-            d = svc.laya_decision(item, item.memo)
+            item = svc.MemoItem(id="1", memo="curtains", amount=35000)
+            return svc.laya_decisions([(item, item.memo)])[0]
         finally:
             svc.router = old
-        self.assertLessEqual(d["confidence"], 0.7)
+
+    def test_close_call_abstains(self):
+        # "Curtains" -> Ajo at 0.55 vs Shopping at 0.45: too close, so the engine keeps its answer
+        d = self.decide({"Ajo & Thrift": 0.55, "Shopping & Retail": 0.45})
+        self.assertEqual(d["confidence"], 0.0)
+        self.assertAlmostEqual(d["margin"], 0.10)
+
+    def test_clear_call_is_accepted_below_dictionary_rules(self):
+        d = self.decide({"Shopping & Retail": 0.95, "Ajo & Thrift": 0.05})
+        self.assertEqual(d["category"], "Shopping & Retail")
+        self.assertGreater(d["confidence"], 0.89)  # beats the generic heuristics
+        self.assertLess(d["confidence"], 0.9)      # never beats a dictionary match
 
 
 if __name__ == "__main__":

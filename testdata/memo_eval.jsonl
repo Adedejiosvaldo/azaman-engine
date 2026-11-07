@@ -1,0 +1,152 @@
+{"memo": "POS DEBIT: 20429635207 CHOPLIFE RESTAURANT LAGOS NG", "amount": 12000, "hour": null, "want": "Food & Dining", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to MAMA NKECHI RICE AND BEANS STORES | OPay | 1922121676", "amount": 36000, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Debit adjustment", "amount": 2500, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "dev"}
+{"memo": "Transfer to WHOGOHOST LIMITED | GTBank | 4058492450", "amount": 15000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "business", "split": "test"}
+{"memo": "NIP/DR/9321359594/DAPO ADEBAYO/urgent 2k", "amount": 2000, "hour": null, "want": "Family & Favors", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "NIP/DR/7813695757/JOY NWOSU/mtn data", "amount": 3500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to BRIGHT FUTURE COLLEGE ACCOUNT | GTBank | 8281238159", "amount": 180000, "hour": null, "want": "Education", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "POS DEBIT: 82988986084 H AND M PHARMACY LAGOS NG", "amount": 8500, "hour": null, "want": "Shopping & Retail", "alt": ["Commercial & Business"], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 68868211393 CONOIL FILLING STATION LAGOS NG", "amount": 20000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Chowdeck Order 88213", "amount": 9500, "hour": 22, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to TUNDE ADEYEMI - pepper and tomatoes", "amount": 6500, "hour": null, "want": "Food & Dining", "alt": ["Market & Small Vendors"], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to CANTEEN SHISHA LOUNGE ENT | OPay | 2703729684", "amount": 26000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "business", "split": "test"}
+{"memo": "LASG Land Use Charge via Remita", "amount": 35000, "hour": null, "want": "Bills & Online Payments", "alt": ["Rent & Housing"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/4755228983/HALIMA SANI/2 bags of rice", "amount": 150000, "hour": null, "want": "Food & Dining", "alt": ["Market & Small Vendors"], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to KLASSIC BARBING SALOON | Zenith Bank | 5113424221", "amount": 3000, "hour": null, "want": "Personal Care", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *NAMECHEAP DOMAIN", "amount": 12000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to BODE MAN-PEACE ENTERPRISE | First Bank | 4177351297", "amount": 15000, "hour": null, "want": "Commercial & Business", "alt": ["Market & Small Vendors"], "kind": "business", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *GOOGLE WORKSPACE", "amount": 9000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to SLOT SYSTEMS LIMITED | MONIE POINT | 2002170858", "amount": 185000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to CHIDI OKEKE - dstv renewal", "amount": 15700, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Electricity | AEDC Prepaid | 45091234567", "amount": 15000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to BISOLA LAWAL | MONIE POINT | 1562571390 | birthday gift", "amount": 15000, "hour": null, "want": "Family & Favors", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *FLUTTERWAVE KONGA", "amount": 39000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS W/D 093218 LAGOS AIRPORT TERMINAL 2", "amount": 20000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to HNG TECH LIMITED | Zenith Bank | 2692732589", "amount": 20000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Commercial & Business", "Education"], "kind": "business", "split": "dev"}
+{"memo": "Transfer to STAFF MULTIPURPOSE COOPERATIVE SOCIETY | First Bank | 7658142303", "amount": 50000, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to SPECTRANET INTERNET LIMITED | Kuda MFB | 4411833895", "amount": 20000, "hour": null, "want": "Workspace & Co-working", "alt": ["Airtime & Utilities"], "kind": "business", "split": "dev"}
+{"memo": "Paycom debit 99381", "amount": 5000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "test"}
+{"memo": "LAWMA waste bill", "amount": 4000, "hour": null, "want": "Rent & Housing", "alt": ["Airtime & Utilities"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to ADAEZE OKAFOR - school fees balance", "amount": 85000, "hour": null, "want": "Education", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Okash Loan Repay", "amount": 18000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to ESTHER AKPAN | Kuda MFB | 2189349776 | laptop charger", "amount": 14000, "hour": null, "want": "Shopping & Retail", "alt": ["Tech & Cloud Infrastructure"], "kind": "purpose", "split": "test"}
+{"memo": "Uber Trip Lagos", "amount": 5600, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment: ChatGPT Plus OpenAI", "amount": 30000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/1438761609/NGOZI IBE/esusu week 4", "amount": 10000, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS DEBIT: 78225267204 QUILOX NIGHT CLUB LAGOS NG", "amount": 120000, "hour": 1, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *BET9JA ONLINE", "amount": 10000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 37579172470 BEAUTY HUB SALON LAGOS NG", "amount": 15000, "hour": null, "want": "Personal Care", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to SANDRA OBI | UBA | 5883955220 | chicken and turkey", "amount": 22000, "hour": null, "want": "Food & Dining", "alt": ["Market & Small Vendors"], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to FEMI ALAO | Access Bank | 7632944622 | nepa light bill", "amount": 8000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "POS DEBIT: 54684022631 GAME STORES IKEJA LAGOS NG", "amount": 54000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to TRENDY SHOES AND BAGS STORES | Zenith Bank | 7591017985", "amount": 19000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Mobile Data | 08051234567 | Glo", "amount": 3000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Online transfer", "amount": 20000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "test"}
+{"memo": "Instant payment out", "amount": 3000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "dev"}
+{"memo": "POS DEBIT: 61943873268 HARD ROCK CAFE LAGOS NG", "amount": 45000, "hour": 23, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 28752614435 MAMA OLU KITCHEN LAGOS NG", "amount": 3500, "hour": null, "want": "Food & Dining", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to RCCG GLORY TABERNACLE PARISH | Access Bank | 8825107365", "amount": 20000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to MAMA TOLU - upkeep for the month", "amount": 50000, "hour": null, "want": "Family & Favors", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Airtime Purchase | MTN | 08031234567", "amount": 2000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to GRACE ETIM - caution fee", "amount": 150000, "hour": null, "want": "Rent & Housing", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Card Payment: YouTube Premium", "amount": 1700, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to NGOZI AMAKA OBI | GTBank | 2368056914", "amount": 10000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "Cowrywise Savings Plan", "amount": 50000, "hour": null, "want": "Ajo & Thrift", "alt": ["FinTech & Investments"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment: Figma Inc Subscription", "amount": 22000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to IKEJA ELECTRIC PLC | Kuda MFB | 9941499199", "amount": 15000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "business", "split": "test"}
+{"memo": "NIP/DR/8737935886/IBRAHIM YUSUF", "amount": 2000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "NIP/DR/9358013058/JOHN CHUKWU", "amount": 25000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "test"}
+{"memo": "Transfer to SOFTLINK SOFTWARE SOLUTIONS | OPay | 3658625969", "amount": 60000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to SAMUEL DAVID EKPO | UBA | 5372628807", "amount": 10000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "test"}
+{"memo": "Transfer to FAIRMONEY MICROFINANCE BANK | Access Bank | 6358464899", "amount": 32000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to REMITA PAYMENT SERVICES | GTBank | 8427910944", "amount": 9000, "hour": null, "want": "Bills & Online Payments", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Merchant payment 00183", "amount": 9000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "dev"}
+{"memo": "TRF/REF 003991827/IFO", "amount": 7000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "test"}
+{"memo": "Transfer to FAVOUR IFEOLUWA BALOGUN | Kuda MFB | 1450024945", "amount": 10000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "Transfer to IYA BASIRAT BUKA VENTURES | GTBank | 5071050724", "amount": 4500, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Card Payment: Udemy Online Course", "amount": 15000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "LCC Toll Lekki Plaza", "amount": 500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Water Corporation bill payment", "amount": 6000, "hour": null, "want": "Rent & Housing", "alt": ["Airtime & Utilities"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to MULTICHOICE NIGERIA LIMITED | First Bank | 2795823848", "amount": 15700, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to MUSA IBRAHIM | Access Bank | 3972361206 | fuel money", "amount": 10000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to ADUNNI FOODSTUFF VENTURES | PalmPay | 2033639716", "amount": 41000, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to IYALOJA THRIFT COOPERATIVE | MONIE POINT | 7224212482", "amount": 20000, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Card Payment: Zara Online Store", "amount": 60000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to RENMONEY MFB LIMITED | Zenith Bank | 3132480060", "amount": 48000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *DOMINOS PIZZA LEKKI", "amount": 11000, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to U STAR DIVINE ENT 2 | UBA | 6980221859", "amount": 8000, "hour": null, "want": "Commercial & Business", "alt": ["Market & Small Vendors"], "kind": "business", "split": "dev"}
+{"memo": "Transfer to ABC TRANSPORT PLC | MONIE POINT | 6538829718", "amount": 18000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to SKYBAR NIGHTLIFE ENTERTAINMENT | PalmPay | 5069265501", "amount": 35000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to EKEDC PREPAID TOKEN VENDOR | Access Bank | 7550669089", "amount": 20000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "business", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *SHOWMAX AFRICA", "amount": 3500, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "ATM WDL GTB IKOYI BRANCH", "amount": 40000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to RUKAYAT BELLO - balance for curtains", "amount": 45000, "hour": null, "want": "Shopping & Retail", "alt": ["Market & Small Vendors", "Rent & Housing"], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to GIG LOGISTICS LIMITED | Kuda MFB | 9790005680", "amount": 12500, "hour": null, "want": "Commute & Transit", "alt": ["Commercial & Business", "Shopping & Retail"], "kind": "business", "split": "test"}
+{"memo": "Cable TV | GOtv Max", "amount": 8500, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to HUB ONE COWORKING SPACE LTD | UBA | 6644219119", "amount": 50000, "hour": null, "want": "Workspace & Co-working", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to CLUB VELVET LOUNGE LTD | First Bank | 2823296038", "amount": 58000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Indrive ride payment", "amount": 3200, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Payment ref 88213411", "amount": 15000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "dev"}
+{"memo": "Transfer to PRECIOUS OKON | PalmPay | 9662226292", "amount": 2000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "test"}
+{"memo": "NIP/DR/1244051092/IBRAHIM GARBA/generator repair", "amount": 25000, "hour": null, "want": "Commercial & Business", "alt": ["Shopping & Retail", "Market & Small Vendors"], "kind": "purpose", "split": "dev"}
+{"memo": "POS DEBIT: 42073681183 SPAR IKEJA CITY MALL LAGOS NG", "amount": 27000, "hour": null, "want": "Food & Dining", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to GREENFIELD INTERNATIONAL SCHOOL | OPay | 8809768138", "amount": 350000, "hour": null, "want": "Education", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to BODE FASHION HOUSE ENTERPRISES | UBA | 6078123983", "amount": 42000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to HOMELINK FACILITY MANAGEMENT | UBA | 1279172786", "amount": 45000, "hour": null, "want": "Rent & Housing", "alt": ["Commercial & Business"], "kind": "business", "split": "dev"}
+{"memo": "Transfer to KINGS TUTORIAL CENTRE | UBA | 2959386986", "amount": 25000, "hour": null, "want": "Education", "alt": [], "kind": "business", "split": "test"}
+{"memo": "POS DEBIT: 30516769266 SHOPRITE LEKKI LAGOS NG", "amount": 34000, "hour": null, "want": "Food & Dining", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to ROYAL TOUCH UNISEX SALON | Zenith Bank | 9531811146", "amount": 8000, "hour": null, "want": "Personal Care", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Carbon loan repayment", "amount": 25000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to OKON GLOBAL CONCEPTS | UBA | 8019220235", "amount": 70000, "hour": null, "want": "Commercial & Business", "alt": [], "kind": "business", "split": "test"}
+{"memo": "NIP/DR/6061712255/YEMI COKER/gown and shoes", "amount": 35000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "NIP/DR/4139638261/PASTOR JAMES UDO/tithe", "amount": 30000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "NIP/DR/5126495981/HALIMA BISOLA LAWAL", "amount": 2000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "Transfer to EMEKA OBI | Zenith Bank | 6859037352 | suya and drinks", "amount": 9000, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to DANIEL OKORO - website hosting", "amount": 30000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *APPLE MUSIC", "amount": 1500, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/5051301074/PAUL ADEWALE/betting stake", "amount": 5000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to CLOUDHOST NIGERIA TECHNOLOGIES LTD | PalmPay | 3744112455", "amount": 45000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "business", "split": "test"}
+{"memo": "NIP/DR/8514792277/IFEANYI NNAJI/bolt ride refund", "amount": 4200, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to AISHA MOHAMMED | MONIE POINT | 2404662647", "amount": 10000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "test"}
+{"memo": "NIP/DR/4315448086/KEMI LAWAL/jamb form", "amount": 7700, "hour": null, "want": "Education", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to FATIMA BELLO - ajo contribution", "amount": 20000, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to STARTIMES MEDIA NIG LTD | GTBank | 7395047810", "amount": 5500, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to SAMUEL EKPO | GTBank | 8395180922 | phone screen repair", "amount": 18000, "hour": null, "want": "Shopping & Retail", "alt": ["Commercial & Business", "Market & Small Vendors"], "kind": "purpose", "split": "test"}
+{"memo": "Glovo food delivery", "amount": 7000, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 32435672939 TOTAL ENERGIES ADMIRALTY LAGOS NG", "amount": 30000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "PalmPay POS Cashout Agent Oshodi", "amount": 10000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to TASTY CORNER EATERY LTD | Zenith Bank | 3795742288", "amount": 7800, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to GOLDEN CRUST BAKERY LIMITED | PalmPay | 7157461338", "amount": 3200, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to LIVING FAITH CHURCH OTA | GTBank | 7277933458", "amount": 10000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to BELLO RUKAYAT ASABI | Access Bank | 4246035554", "amount": 25000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *COURSERA", "amount": 25000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to JUMIA SERVICES NIGERIA | Access Bank | 1017581913", "amount": 27500, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to NAIJA BET GAMING LTD | UBA | 1253207296", "amount": 2000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to QUICKTELLER BILLS LTD | Access Bank | 1314395342", "amount": 6500, "hour": null, "want": "Bills & Online Payments", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "NIP/DR/2167889500/KEMI ADAEZE NWOSU", "amount": 5000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "test"}
+{"memo": "Transfer to BLESSING ANI | OPay | 8688481670 | thanksgiving offering", "amount": 10000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "USSD Airtime Recharge 9mobile", "amount": 1000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to UNCLE BAYO - transport home for mum", "amount": 20000, "hour": null, "want": "Family & Favors", "alt": ["Commute & Transit"], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to CHIOMA EZE | Kuda MFB | 2892478001 | foodstuff for the house", "amount": 28000, "hour": null, "want": "Food & Dining", "alt": ["Market & Small Vendors"], "kind": "purpose", "split": "test"}
+{"memo": "NIP/DR/9043638807/VICTOR ETUK/loan repayment", "amount": 40000, "hour": null, "want": "Loans & Debt Service", "alt": ["Family & Favors"], "kind": "purpose", "split": "dev"}
+{"memo": "Transfer to TOLANI ADE | MONIE POINT | 3613722295 | cow leg", "amount": 7000, "hour": null, "want": "Food & Dining", "alt": ["Market & Small Vendors"], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to FAITH AND SONS NIG LTD | OPay | 1818661757", "amount": 120000, "hour": null, "want": "Commercial & Business", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to ALABA ELECTRONICS PLAZA | GTBank | 5093524416", "amount": 95000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to AYOMIDE PETROLEUM VENTURES | Access Bank | 3929179284", "amount": 30000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "NIP/DR/3955820429/TOSIN ADEOLA", "amount": 25000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "test"}
+{"memo": "Transfer to GLAM BY TOYIN MAKEUP STUDIO | MONIE POINT | 1356416554", "amount": 25000, "hour": null, "want": "Personal Care", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to LANDMARK PROPERTIES AND ESTATES LTD | PalmPay | 9352341718", "amount": 1200000, "hour": null, "want": "Rent & Housing", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to OLUMIDE SHOLA | First Bank | 7454034571 | house rent 2026", "amount": 900000, "hour": null, "want": "Rent & Housing", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Web transfer 2093383", "amount": 12000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "test"}
+{"memo": "Transfer to MRS FILLING STATION LEKKI | MONIE POINT | 3322228204", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to BETLAND SPORTS LIMITED | MONIE POINT | 3623879480", "amount": 5000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to KUNLE BADMUS - barbing", "amount": 2000, "hour": null, "want": "Personal Care", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *IKEJA ELECTRIC TOKEN", "amount": 10000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/5378645845/VICTORIA CHIOMA OKORO", "amount": 50000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "Transfer to OLAMIDE AJAYI - pos cash", "amount": 10000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to ABULE EGBA FRESH FOODS ENTERPRISES | PalmPay | 5699252753", "amount": 23000, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Betting | SportyBet | 08031112222", "amount": 3000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to CENTRAL MOSQUE ZAKAT COMMITTEE | Access Bank | 8372860242", "amount": 15000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to AMAKA UCHE | UBA | 6139813853 | hair making", "amount": 12000, "hour": null, "want": "Personal Care", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to THE DESK WORKSPACE ENTERPRISES | UBA | 6847951704", "amount": 35000, "hour": null, "want": "Workspace & Co-working", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to SEGUN BALOGUN - keke fare", "amount": 1500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "purpose", "split": "test"}
