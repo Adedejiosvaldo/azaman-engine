@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"azaman-engine/internal/ai"
 	"azaman-engine/internal/models"
 )
 
@@ -23,10 +24,10 @@ func TestCORSNoCredentialsWithoutAllowlist(t *testing.T) {
 func TestLayaSkipsBareNameTransfers(t *testing.T) {
 	bare := models.DecodedTransaction{Counterparty: "CYRIL SUNDAY AYI"}
 	typed := models.DecodedTransaction{Counterparty: "CYRIL SUNDAY AYI", Purpose: "curtains"}
-	if layaEligible(bare) {
+	if ai.Eligible(bare) {
 		t.Error("a transfer with only a name should not go to Laya")
 	}
-	if !layaEligible(typed) {
+	if !ai.Eligible(typed) {
 		t.Error("a transfer with a typed purpose should go to Laya")
 	}
 }

@@ -18,6 +18,7 @@ type LayaClient struct {
 	mu         sync.RWMutex
 	lastCheck  time.Time
 	available  bool
+	model      string // what the sidecar runs: "laya-english", or "fallback-classifier" (rules only)
 }
 
 // LayaMemoItem represents an unknown or low-confidence memo sent for typed decision.
@@ -43,6 +44,8 @@ type LayaDecision struct {
 	IsUrgent2k      bool    `json:"is_urgent_2k"`
 	IsTaxDeductible bool    `json:"is_tax_deductible"`
 	IsPurchase      bool    `json:"is_purchase"` // payment to a person for something bought, not support
+	// Margin is how far the model's top category beat the runner-up (0-1). Absent for rule answers.
+	Margin *float64 `json:"margin,omitempty"`
 }
 
 // maxResponseBytes bounds how much of a sidecar response is read into RAM.
@@ -63,6 +66,11 @@ var (
 	once          sync.Once
 )
 
+// NewLayaClient builds a client for a sidecar at baseURL (the engine uses GetLayaClient instead).
+func NewLayaClient(baseURL string, timeout time.Duration) *LayaClient {
+	return &LayaClient{BaseURL: baseURL, httpClient: &http.Client{Timeout: timeout}}
+}
+
 // GetLayaClient returns the singleton Laya sidecar client.
 func GetLayaClient() *LayaClient {
 	once.Do(func() {
@@ -74,11 +82,24 @@ func GetLayaClient() *LayaClient {
 		defaultClient = &LayaClient{
 			BaseURL: baseURL,
 			httpClient: &http.Client{
-				Timeout: 1 * time.Second, // Bounded timeout ensures sub-second responses
+				// One batched call for up to 25 memos. If it runs over, the audit carries on with
+				// the rules' answers, so a slow model costs time but never a failed audit.
+				Timeout: 4 * time.Second,
 			},
 		}
 	})
 	return defaultClient
+}
+
+// aiBackoff is how long the engine stops asking the AI after a request fails or times out.
+const aiBackoff = 5 * time.Minute
+
+// pause marks the sidecar unavailable for d (IsAvailable re-probes once it has passed).
+func (c *LayaClient) pause(d time.Duration) {
+	c.mu.Lock()
+	c.available = false
+	c.lastCheck = time.Now().Add(d)
+	c.mu.Unlock()
 }
 
 // IsAvailable checks if the local Laya service is running and responsive.
@@ -108,10 +129,23 @@ func (c *LayaClient) IsAvailable() bool {
 		c.available = false
 	} else {
 		c.available = true
+		var h struct {
+			Model string `json:"model"`
+		}
+		if json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&h) == nil {
+			c.model = h.Model
+		}
 		_ = resp.Body.Close()
 	}
 	c.lastCheck = time.Now()
 	return c.available
+}
+
+// Model is what the sidecar reported at the last health probe ("" if never reached).
+func (c *LayaClient) Model() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.model
 }
 
 // ClassifyBatch queries Laya with a list of ambiguous memos in a single request.
@@ -134,6 +168,9 @@ func (c *LayaClient) ClassifyBatch(items []LayaMemoItem) (map[string]LayaDecisio
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		// Usually a timeout: the model is too slow for this host. Stop asking for a while so
+		// every audit doesn't wait out the timeout; the rules' answers are used meanwhile.
+		c.pause(aiBackoff)
 		return nil, err
 	}
 	defer resp.Body.Close()

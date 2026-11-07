@@ -78,6 +78,13 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		decoded.Category = VendorCategory
 		decoded.Classification = "Personal Purchase"
 		decoded.Confidence = 0.75 // below 0.9: Laya and the review panel may still correct it
+		// When the purpose names the item ("Deposits for MacBook", "Part payment inverter"),
+		// that says what kind of purchase it was.
+		if cat, _, ok := IndustryCategory(purpose); ok {
+			decoded.Merchant = titleCase(counterparty) + " (" + titleCase(purpose) + ")"
+			decoded.Category = cat
+			decoded.Confidence = industryConfidence
+		}
 	} else if rule != nil {
 		decoded.Merchant = rule.Merchant
 		decoded.Category = rule.Category
@@ -232,7 +239,19 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 			return
 		}
 
-		// 2. Commercial entity / Sole Proprietorship check
+		// 2. A trade word in the name says what was bought ("Royal Touch Unisex Salon"). The whole
+		// recipient part is read, so a branch name counts too ("Sunrise Foods - Cinema Lekki").
+		recipient := strings.SplitN(rawMemo, "|", 2)[0]
+		if cat, class, ok := IndustryCategory(recipient); ok {
+			d.Flags.IsBusiness = true
+			d.Merchant = titleCase(name)
+			d.Category = cat
+			d.Classification = class
+			d.Confidence = industryConfidence
+			return
+		}
+
+		// 3. Commercial entity / Sole Proprietorship check
 		businessSuffixes := []string{
 			"venture", "ventures", "enterprise", "enterprises", "store", "stores",
 			"global", "service", "services", "logistics", "pharmacy", "farm", "farms",
@@ -252,7 +271,7 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 			}
 		}
 
-		// 3. Recipient banks with Moniepoint are overwhelmingly traders and market vendors
+		// 4. Recipient banks with Moniepoint are overwhelmingly traders and market vendors
 		// (business accounts and POS terminals), even when the account is in a personal name.
 		if isVendorBank(rawMemo) {
 			d.Merchant = titleCase(name) + " (Vendor)"
@@ -262,11 +281,20 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 			return
 		}
 
-		// 4. Genuine Family & Favors transfer
+		// 5. Genuine Family & Favors transfer
 		d.Merchant = "Transfer to " + titleCase(name)
 		d.Category = "Family & Favors"
 		d.Classification = "Micro-Transfer (Urgent 2k)"
 		d.Confidence = 0.88
+		return
+	}
+
+	// Card, POS and web payments: a trade word in the merchant name ("Conoil Filling Station")
+	if cat, class, ok := IndustryCategory(lowerClean); ok {
+		d.Merchant = titleCase(cleaned)
+		d.Category = cat
+		d.Classification = class
+		d.Confidence = industryConfidence
 		return
 	}
 

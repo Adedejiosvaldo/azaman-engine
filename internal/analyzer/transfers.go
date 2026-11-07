@@ -17,6 +17,11 @@ var (
 	// Counterparty name after "Transfer to/from", "Sent to", or NIP/DR/<acct>/<NAME>/
 	counterpartyRe = regexp.MustCompile(`(?i)(?:transfer|trf|sent|received|payment)\s+(?:to|from)\s+([A-Za-z][A-Za-z ,.'-]{2,60})|NIP/(?:DR|CR)/[^/]+/([A-Za-z][A-Za-z ,.'-]{2,60})`)
 	nonLetterRe    = regexp.MustCompile(`[^a-z ]+`)
+	// Account numbers as statements print them: masked ("301****452") or in full (10 digits).
+	accountNumberRe = regexp.MustCompile(`^(?:[0-9]{2,4}\*{2,}[0-9]{2,4}|[0-9]{10})$`)
+	// A bank segment right before an account number: "| Zenith Bank | 301****452". On OPay the
+	// account number is also the phone number, so "Airtime | 8031****27" must not count.
+	bankSegmentRe = regexp.MustCompile(`(?i)bank|mfb|microfinance|plc|opay|palmpay|monie ?point|kuda|carbon|paga|fcmb|uba|gtb`)
 
 	selfTransferKeywords = []string{"add money", "fund wallet", "wallet top up", "wallet topup", "own account", "to self", "self transfer", "my account", "between accounts", "inter-account", "intra account"}
 	reversalKeywords     = []string{"reversal", "reversed", "rvsl", "rev/", "refund", "failed trf", "failed transfer"}
@@ -35,18 +40,39 @@ const cbnReversalDeadline = 48 * time.Hour
 func DetectSelfTransfers(txs []models.DecodedTransaction, accountHolder string) models.InternalTransfersReport {
 	var report models.InternalTransfersReport
 	holderTokens := nameTokens(accountHolder)
+	isSelf := func(tx models.DecodedTransaction) bool {
+		lower := strings.ToLower(tx.RawDescription + " " + tx.CleanMemo)
+		return containsAny(lower, selfTransferKeywords) || isSameName(holderTokens, counterparty(tx.RawDescription)) ||
+			mentionsHolderAsCounterparty(holderTokens, tx.RawDescription)
+	}
+
+	// Accounts already seen moving money to or from the holder are the holder's own, so another row
+	// with the same account number is too, even when the bank cut the name short
+	// ("Transfer from TUNDE | Zenith Bank | 301****452" next to "... MR TUNDE BAKARE ... 301****452").
+	ownAccounts := map[string]bool{}
+	for _, tx := range txs {
+		if !tx.Flags.IsBankFee && !tx.Flags.IsReversal && !tx.Flags.IsSavings && isSelf(tx) {
+			for _, a := range bankAccounts(tx.RawDescription) {
+				ownAccounts[a] = true
+			}
+		}
+	}
+	fromOwnAccount := func(tx models.DecodedTransaction) bool {
+		for _, a := range bankAccounts(tx.RawDescription) {
+			if ownAccounts[a] {
+				return true
+			}
+		}
+		return false
+	}
 
 	for i := range txs {
 		tx := &txs[i]
 		if tx.Flags.IsBankFee || tx.Flags.IsReversal {
 			continue
 		}
-		lower := strings.ToLower(tx.RawDescription + " " + tx.CleanMemo)
-		if !tx.Flags.IsSavings {
-			if containsAny(lower, selfTransferKeywords) || isSameName(holderTokens, counterparty(tx.RawDescription)) ||
-				mentionsHolderAsCounterparty(holderTokens, tx.RawDescription) {
-				tx.Flags.IsSelfTransfer = true
-			}
+		if !tx.Flags.IsSavings && (isSelf(*tx) || fromOwnAccount(*tx)) {
+			tx.Flags.IsSelfTransfer = true
 		}
 		if !tx.Flags.IsInternal() {
 			continue
@@ -278,6 +304,19 @@ func counterparty(desc string) string {
 		name = name[:cut]
 	}
 	return strings.TrimSpace(name)
+}
+
+// bankAccounts returns the account numbers in a "... | <bank> | <account>" description.
+func bankAccounts(desc string) []string {
+	segs := strings.Split(desc, "|")
+	var out []string
+	for i := 1; i < len(segs); i++ {
+		acct := strings.TrimSpace(segs[i])
+		if accountNumberRe.MatchString(acct) && bankSegmentRe.MatchString(segs[i-1]) {
+			out = append(out, acct)
+		}
+	}
+	return out
 }
 
 func nameTokens(name string) []string {
@@ -521,7 +560,7 @@ func titleWords(s string) string {
 }
 
 // holderMentionRe finds "TRANSFER TO/FROM <anything> - NAME" and "FROM NAME-BANK-NAME" style tails
-// used by GTBank ("NIP TRANSFER TO OPAY - JOSEPH ADEDEJI ADEWUNMI").
+// used by GTBank ("NIP TRANSFER TO OPAY - TUNDE OLUMIDE BAKARE").
 var (
 	holderMentionRe = regexp.MustCompile(`(?i)\b(?:to|from)\b[:\s]+([A-Za-z][A-Za-z .,'/-]{2,80})`)
 	segmentSplitRe  = regexp.MustCompile(`\s*[-/]\s*`)

@@ -33,10 +33,13 @@ RUN pip install --index-url https://download.pytorch.org/whl/cpu torch
 COPY sidecar/requirements.txt sidecar/requirements.txt
 RUN pip install -r sidecar/requirements.txt
 
-# Prefetch Laya checkpoints. Set --build-arg PRELOAD_LAYA=0 to skip (sidecar then runs on fallback rules).
+# Prefetch the one Laya checkpoint the sidecar uses (LAYA_MODEL, default english). The other two
+# are never used, so they are not downloaded. Set --build-arg PRELOAD_LAYA=0 to skip (fallback rules).
 ARG PRELOAD_LAYA=1
+ARG LAYA_MODEL=english
+ENV LAYA_MODEL=${LAYA_MODEL}
 RUN if [ "$PRELOAD_LAYA" = "1" ]; then \
-      python -c "from laya import Router; Router(preload=True); print('Laya checkpoints cached')"; \
+      python -c "import os; from laya import Router; Router(max_loaded=1).preload([os.environ['LAYA_MODEL']]); print('Laya checkpoint cached')"; \
     fi
 
 # The runtime user must be able to read the cached checkpoints (avoids "Permission denied" on the hub cache)

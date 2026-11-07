@@ -540,7 +540,7 @@ var MerchantRegistry = []MerchantRule{
 
 	// ==================== PIDGIN / SLANG PURPOSE MEMOS ====================
 	{
-		Patterns:       []string{"t fare", "tfare", "t-fare", "transport fare", "transpo", "okada", "keke", "danfo", "brt"},
+		Patterns:       []string{"t fare", "tfare", "t-fare", "tf", "transport fare", "transpo", "okada", "keke", "danfo", "brt"},
 		Merchant:       "Transport Fare",
 		PurposeOnly:    true,
 		Category:       "Commute & Transit",
@@ -577,7 +577,7 @@ var MerchantRegistry = []MerchantRule{
 		Patterns: []string{"mum", "dad", "mama", "papa", "mummy", "daddy", "brother", "sister", "family", "house upkeep", "upkeep",
 			"feeding", "iya", "baba", "aunty", "uncle", "pikin", "my wife", "my husband", "black tax",
 			"allowance", "gift", "birthday", "sallah", "ileya", "xmas", "christmas", "hospital bill", "support", "assistance", "for you",
-			"for the week", "weekly", "happy", "enjoy", "bday", "treatment"},
+			"for the week", "weekly", "happy", "enjoy", "bday", "treatment", "thank"},
 		Merchant:       "Family Upkeep",
 		PurposeOnly:    true,
 		Category:       "Family & Favors",
