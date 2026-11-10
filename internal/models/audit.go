@@ -231,6 +231,15 @@ type AuditReport struct {
 	AuditMeta     AuditMeta               `json:"audit_meta"`
 	// Accounts lists every statement in the audit, one entry per uploaded file.
 	Accounts []AccountSummary `json:"accounts"`
+	// GradeProof lets the landing site sign share links without seeing the statement (PDFs only).
+	GradeProof *GradeProof `json:"grade_proof,omitempty"`
+}
+
+// GradeProof is the share-card numbers as a JSON string, with an HMAC-SHA256 (base64url) over
+// exactly those bytes, keyed with GRADE_PROOF_SECRET.
+type GradeProof struct {
+	Payload string `json:"payload"`
+	Sig     string `json:"sig"`
 }
 
 // AccountSummary is one uploaded statement inside an audit: where it came from and its own totals.
