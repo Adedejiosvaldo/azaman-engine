@@ -179,6 +179,7 @@ func HandleAudit(c *gin.Context) {
 	audit.Check = check
 	analyzer.FillAccountTotals(accounts, audit.Transactions)
 	audit.Accounts = accounts
+	audit.GradeProof = gradeProof(&audit, time.Now())
 
 	// detail=summary drops per-transaction arrays (~95% smaller) for low-end phones and costly data.
 	if c.DefaultPostForm("detail", c.Query("detail")) == "summary" {

@@ -8,8 +8,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=64m
-    mem_limit: 2g     # Laya now loads one checkpoint (~1.4GB measured), not all three (~3GB)
+    # Laya with one checkpoint sits at ~1.9GB idle; 3g leaves room for inference. With LAYA_DISABLE=1, 512m is plenty.
+    mem_limit: ${AZAMAN_MEM_LIMIT:-3g}
     environment:
+      # Optional: 1 turns the Laya AI sidecar off (rules only, ~1.8GB less RAM)
+      LAYA_DISABLE: ${LAYA_DISABLE:-}
+      # Same long random value as GRADE_PROOF_SECRET on the landing site; lets it sign share links
+      GRADE_PROOF_SECRET: ${GRADE_PROOF_SECRET:-}
       # Only these origins may call the API from a browser (the dashboard itself is same-origin)
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://${DOMAIN:?set DOMAIN in deploy/.env}}
       # Optional: turns on GET /api/v1/stats (counts only) for "Authorization: Bearer <token>"
