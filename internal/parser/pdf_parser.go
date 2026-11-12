@@ -190,9 +190,9 @@ func ParsePDF(data []byte, password string, bankName string) (txs []models.RawTr
 		}
 		pageRunList = append(pageRunList, runs)
 	}
-	if tableTxs := parseTablePDF(pageRunList, detectedBank, defaultCurrency); len(tableTxs) > 0 {
+	if tableTxs, stated := parseTablePDF(pageRunList, detectedBank, defaultCurrency); len(tableTxs) > 0 {
 		tableRows = len(tableTxs)
-		return tableTxs, detectedBank, check, nil
+		return tableTxs, detectedBank, CheckTotals(tableTxs, stated), nil
 	}
 
 	transactions := parseLinesToTransactions(allLines, detectedBank, defaultCurrency)
@@ -235,6 +235,7 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 	var results []models.RawTransaction
 	var stated *models.StatementCheck
 	var cols []opayColumn
+	var carryDesc, carryRefs []string // first lines of a row split across a page break
 	sections := 0
 
 	for p := 1; p <= pdfReader.NumPage(); p++ {
@@ -285,6 +286,54 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 			}
 		}
 
+		// A wrapped reference is centred on its date line, so it reaches as far below the date as
+		// above. That matters at page edges, where OPay splits a row in two: lines left under the
+		// last date belong to the first transaction of the next page, and lines above the first
+		// date beyond its own reach finish the previous page's last one.
+		reach := func(ri int, from, to float64, above bool) float64 {
+			y, far := float64(body[ri].Position), 0.0
+			for _, r := range body {
+				pos := float64(r.Position)
+				if pos > to || pos <= from || (above && pos <= y) || (!above && pos >= y) {
+					continue
+				}
+				for _, c := range r.Content {
+					if opayColumnAt(cols, c.X) == colReference && strings.TrimSpace(c.S) != "" {
+						far = math.Max(far, math.Abs(pos-y))
+					}
+				}
+			}
+			return far
+		}
+		collectRefs := func(from, to float64) (refs []string) {
+			for _, r := range body {
+				if pos := float64(r.Position); pos > to || pos <= from {
+					continue
+				}
+				for _, c := range r.Content {
+					if opayColumnAt(cols, c.X) == colReference && strings.TrimSpace(c.S) != "" {
+						refs = append(refs, strings.TrimSpace(c.S))
+					}
+				}
+			}
+			return refs
+		}
+
+		dateYs := make([]float64, len(dateRows))
+		for k, ri := range dateRows {
+			dateYs[k] = float64(body[ri].Position)
+		}
+		descOf, leadDesc, nextDesc := opayDescriptions(body, cols, dateYs)
+		if len(leadDesc) > 0 && len(results) > 0 {
+			last := &results[len(results)-1]
+			last.Description = joinWrapped(append([]string{last.Description + " "}, leadDesc...))
+			last.RawLine = fmt.Sprintf("%s | %s | Debit: %.2f | Credit: %.2f | Bal: %.2f",
+				last.Date, last.Description, last.Debit, last.Credit, last.Balance)
+		} else if len(leadDesc) > 0 && len(dateYs) > 0 {
+			descOf[0] = append(leadDesc, descOf[0]...)
+		}
+
+		var nextRefs []string // reference lines under this page's last transaction, owed to the next
 		for k, ri := range dateRows {
 			y := float64(body[ri].Position)
 			upper, lower := math.Inf(1), math.Inf(-1)
@@ -294,9 +343,19 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 			if k+1 < len(dateRows) {
 				lower = (y + float64(body[dateRows[k+1]].Position)) / 2
 			}
+			if k == 0 && len(results) > 0 {
+				upper = y + reach(ri, lower, y, false) + opayLineSlack
+				results[len(results)-1].Reference += strings.Join(collectRefs(upper, math.Inf(1)), "")
+			}
+			if k == len(dateRows)-1 {
+				lower = y - reach(ri, y, upper, true) - opayLineSlack
+				nextRefs = collectRefs(y-opayRowPitch, lower)
+			}
 
 			tx := models.RawTransaction{Bank: detectedBank, Currency: currency}
-			var desc, refs []string
+			desc := append(carryDesc, descOf[k]...)
+			refs := carryRefs
+			carryDesc, carryRefs = nil, nil
 			for _, r := range body {
 				if pos := float64(r.Position); pos > upper || pos <= lower {
 					continue
@@ -311,8 +370,6 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 						if tx.Date == "" {
 							tx.Date = txt
 						}
-					case colRemarks:
-						desc = append(desc, txt)
 					case colDebit:
 						tx.Debit = ParseAmount(txt)
 					case colCredit:
@@ -325,13 +382,14 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 				}
 			}
 
-			tx.Description = strings.Join(strings.Fields(strings.Join(desc, " ")), " ")
+			tx.Description = joinWrapped(desc)
 			tx.Reference = strings.Join(refs, "")
 			tx.ParsedDate, _ = ParseDate(tx.Date)
 			tx.RawLine = fmt.Sprintf("%s | %s | Debit: %.2f | Credit: %.2f | Bal: %.2f",
 				tx.Date, tx.Description, tx.Debit, tx.Credit, tx.Balance)
 			results = append(results, tx)
 		}
+		carryDesc, carryRefs = nextDesc, nextRefs
 		if sections > 1 {
 			break
 		}
@@ -426,6 +484,81 @@ func fillCardFundedTransfers(txs []models.RawTransaction) {
 		tx.RawLine = fmt.Sprintf("%s | %s | Debit: %.2f | Credit: %.2f | Bal: %.2f",
 			tx.Date, tx.Description, tx.Debit, tx.Credit, tx.Balance)
 	}
+}
+
+const (
+	opayLineSlack = 2.0  // tolerance when measuring how far a cell's lines reach
+	opayRowPitch  = 45.0 // lines further below a page's last date are footer, not a split row
+	opayCellGap   = 16.5 // between the 12-unit line spacing inside a cell and the 21 between cells
+)
+
+// opayDescriptions assigns the description column's lines to transactions. Lines of one cell are
+// 12 units apart and cells are at least 21 apart, whatever their length, so a gap wider than
+// opayCellGap starts a new cell. A cell belongs to the date line it surrounds. Cells with no date
+// on this page are halves of rows split by a page break: above the first date they finish the
+// previous page's last transaction (lead), below the last date they start the next page's first
+// (next). dateYs are the date lines' positions, top to bottom.
+func opayDescriptions(body pdf.Rows, cols []opayColumn, dateYs []float64) (perDate map[int][]string, lead, next []string) {
+	type cell struct {
+		top, bottom float64
+		lines       []string
+	}
+	var cells []cell
+	for _, r := range body {
+		pos := float64(r.Position)
+		var text string
+		for _, c := range r.Content {
+			if opayColumnAt(cols, c.X) == colRemarks {
+				text += c.S
+			}
+		}
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		if n := len(cells); n > 0 && cells[n-1].bottom-pos <= opayCellGap {
+			cells[n-1].bottom = pos
+			cells[n-1].lines = append(cells[n-1].lines, text)
+			continue
+		}
+		cells = append(cells, cell{top: pos, bottom: pos, lines: []string{text}})
+	}
+
+	perDate = make(map[int][]string, len(dateYs))
+	for _, c := range cells {
+		owner, best := -1, math.Inf(1)
+		for k, y := range dateYs {
+			if y > c.top+opayCellGap/2 || y < c.bottom-opayCellGap/2 {
+				continue
+			}
+			if d := math.Abs(y - (c.top+c.bottom)/2); d < best {
+				owner, best = k, d
+			}
+		}
+		switch {
+		case owner >= 0:
+			perDate[owner] = append(perDate[owner], c.lines...)
+		case len(dateYs) == 0 || c.bottom > dateYs[0]:
+			lead = append(lead, c.lines...)
+		case c.top < dateYs[len(dateYs)-1]:
+			if dateYs[len(dateYs)-1]-c.top <= opayRowPitch { // further down is footer text
+				next = append(next, c.lines...)
+			}
+		default: // between two dates but around neither: give it to the nearer one
+			for k, y := range dateYs {
+				if d := math.Min(math.Abs(y-c.top), math.Abs(y-c.bottom)); d < best {
+					owner, best = k, d
+				}
+			}
+			perDate[owner] = append(perDate[owner], c.lines...)
+		}
+	}
+	return perDate, lead, next
+}
+
+// joinWrapped rebuilds a cell from its wrapped lines. The PDF keeps the space at the end of a
+// line that broke between words, so a line without one broke mid-word and joins with no space.
+func joinWrapped(lines []string) string {
+	return strings.Join(strings.Fields(strings.Join(lines, "")), " ")
 }
 
 type opayColumn struct {
@@ -593,60 +726,78 @@ func parseLinesToTransactions(lines []string, bankName, currency string) []model
 	}
 
 	flushCurrent()
+	// A lone amount column doesn't say which way the money went; the running balance does.
+	reconcileBalances(results, 0, false)
 	return results
 }
 
-// extractFieldsFromTokens separates narration text from numeric amount/balance columns.
+// extractFieldsFromTokens separates narration text from the amount and balance columns. Money
+// columns close a statement line and are printed with kobo ("1,500.00"), so the figures are the
+// trailing tokens with a decimal part; whole numbers inside a narration (references, phone
+// numbers, "2024") stay in the description. Lines with no decimal figure fall back to any number.
 func extractFieldsFromTokens(tokens []string) (desc string, debit float64, credit float64, balance float64, ref string) {
 	if len(tokens) == 0 {
 		return "", 0, 0, 0, ""
 	}
 
-	type numItem struct {
-		val float64
-		idx int
+	isMoney := func(t string, needDecimal bool) bool {
+		if !amountTokenRe.MatchString(t) {
+			return false
+		}
+		return !needDecimal || moneyDecimalRe.MatchString(t)
 	}
-
-	var numericTokens []numItem
-	var textTokens []string
-
-	for i, t := range tokens {
-		// Clean and parse
-		cleanedT := strings.Trim(t, "(),")
-		if amt := ParseAmount(cleanedT); amt != 0 || t == "0.00" || t == "0" || t == "-0.00" {
-			// Verify it looks like an amount rather than a word
-			if amountTokenRe.MatchString(t) || t == "0.00" || t == "0" {
-				numericTokens = append(numericTokens, numItem{val: amt, idx: i})
+	figures := func(needDecimal bool) (vals []float64, raw []string, text []string) {
+		end := len(tokens)
+		for end > 0 && (isMoney(tokens[end-1], needDecimal) || isDirectionMark(tokens[end-1])) {
+			end--
+		}
+		for _, t := range tokens[end:] {
+			if isDirectionMark(t) { // "1,500.00 DR": the mark belongs to the figure before it
+				if n := len(vals); n > 0 && strings.EqualFold(t, "DR") {
+					vals[n-1] = -math.Abs(vals[n-1])
+				}
 				continue
 			}
+			vals = append(vals, ParseAmount(t))
+			raw = append(raw, t)
 		}
-		textTokens = append(textTokens, t)
+		return vals, raw, tokens[:end]
 	}
 
-	desc = strings.Join(textTokens, " ")
+	vals, _, text := figures(true)
+	if len(vals) == 0 {
+		vals, _, text = figures(false)
+	}
+	if len(vals) > 3 {
+		// More figures than columns: the extra leading ones are part of the narration
+		extra := len(vals) - 3
+		text = tokens[:len(text)+extra]
+		vals = vals[extra:]
+	}
+	desc = strings.Join(text, " ")
 
-	// If we have at least 2 numbers (amount and balance) or 3 (debit, credit, balance)
-	if len(numericTokens) >= 3 {
-		// Typically: Debit, Credit, Balance
-		debit = math.Abs(numericTokens[0].val)
-		credit = math.Abs(numericTokens[1].val)
-		balance = numericTokens[2].val
-	} else if len(numericTokens) == 2 {
-		amt := numericTokens[0].val
-		balance = numericTokens[1].val
-		if amt < 0 {
-			debit = math.Abs(amt)
+	switch len(vals) {
+	case 3: // debit, credit, balance
+		debit, credit, balance = math.Abs(vals[0]), math.Abs(vals[1]), vals[2]
+	case 2: // amount, balance: the sign or the running balance says which way it went
+		balance = vals[1]
+		if vals[0] < 0 {
+			debit = -vals[0]
 		} else {
-			credit = amt
+			credit = vals[0]
 		}
-	} else if len(numericTokens) == 1 {
-		amt := numericTokens[0].val
-		if amt < 0 {
-			debit = math.Abs(amt)
+	case 1:
+		if vals[0] < 0 {
+			debit = -vals[0]
 		} else {
-			credit = amt
+			credit = vals[0]
 		}
 	}
-
 	return desc, debit, credit, balance, ref
+}
+
+var moneyDecimalRe = regexp.MustCompile(`\.\d{1,2}\)?(?:CR|DR)?$`)
+
+func isDirectionMark(t string) bool {
+	return strings.EqualFold(t, "DR") || strings.EqualFold(t, "CR")
 }

@@ -58,7 +58,8 @@ func TestParseCSV(t *testing.T) {
 16-Jan-2024,16-Jan-2024,093202,,1500000.00,1950000.00,NIP/CR/CLIENT_01_REMOTE_USD_CONV
 17-Jan-2024,17-Jan-2024,093203,2000.00,,1948000.00,NIP/DR/0123456789/ADEBAYO SEGUN/URGENT 2K
 `
-	txs, err := ParseCSV(strings.NewReader(gtbCSV), BankGTB)
+	sheet, err := ParseCSV(strings.NewReader(gtbCSV), BankGTB)
+	txs := sheet.Txs
 	if err != nil {
 		t.Fatalf("ParseCSV failed: %v", err)
 	}
@@ -84,7 +85,8 @@ func TestParseCSV_SingleAmountColumn(t *testing.T) {
 2024-01-15,-8500.00,Chowdeck Lagos Late Night,Food,50000.00
 2024-01-16,500000.00,Client Freelance Retainer,Income,550000.00
 `
-	txs, err := ParseCSV(strings.NewReader(kudaCSV), BankKuda)
+	sheet, err := ParseCSV(strings.NewReader(kudaCSV), BankKuda)
+	txs := sheet.Txs
 	if err != nil {
 		t.Fatalf("ParseCSV failed: %v", err)
 	}

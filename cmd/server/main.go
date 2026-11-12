@@ -22,11 +22,14 @@ func main() {
 	router := api.SetupRouter()
 
 	srv := &http.Server{
-		Addr:           ":" + port,
-		Handler:        router,
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+		Addr:    ":" + port,
+		Handler: router,
+		// Browsers upload statements straight here, often over slow mobile data: allow time for a
+		// large upload plus parsing. Caddy buffers the body first, so these rarely bind in production.
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       120 * time.Second,
+		WriteTimeout:      180 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	// Channel to listen for errors from the server

@@ -25,10 +25,13 @@
 		}
 	}
 
+	# Browsers upload statements here directly, often over slow mobile data. Caddy takes in the whole
+	# upload first, so the engine gets it at full speed and its timeouts only cover the work itself.
 	reverse_proxy azaman:8080 {
+		request_buffers 33MB
 		transport http {
-			read_timeout 60s
-			write_timeout 60s
+			read_timeout 150s
+			write_timeout 150s
 		}
 	}
 }

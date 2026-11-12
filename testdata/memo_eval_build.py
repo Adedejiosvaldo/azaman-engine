@@ -224,7 +224,7 @@ for memo, amt in UNKNOWN:
 
 # ---- Plain transfers to people, no purpose: not scored, must stay untouched by the AI ----
 PEOPLE = ["NGOZI AMAKA OBI", "VICTORIA CHIOMA OKORO", "SAMUEL DAVID EKPO", "HALIMA BISOLA LAWAL",
-          "FAVOUR IFEOLUWA BALOGUN", "KEMI ADAEZE NWOSU", "BELLO RUKAYAT ASABI", "JOHN CHUKWU",
+          "SEUN ADUNNI BALOGUN", "KEMI ADAEZE NWOSU", "BELLO RUKAYAT ASABI", "JOHN CHUKWU",
           "AISHA MOHAMMED", "TOSIN ADEOLA", "PRECIOUS OKON", "IBRAHIM YUSUF"]
 for i, name in enumerate(PEOPLE):
     memo = pipe(name) if i % 2 == 0 else nip(name)

@@ -13,6 +13,9 @@ var (
 	// NIBSS: "NIP/DR/0123456789/NAME/purpose"
 	nipMemoRe = regexp.MustCompile(`(?i)^\s*NIP/(?:DR|CR)/[^/]+/([^/]+)(?:/(.*))?$`)
 
+	// Access Bank: "TRF/purpose/FRM SENDER TO RECIPIENT" (the purpose may be empty)
+	frmToMemoRe = regexp.MustCompile(`(?i)^\s*(?:MOB/)?(?:UTO/|UTU/)?TRF/([^/]*)/FRM\s+.+?\s+TO\s+(.+?)\s*$`)
+
 	purposeNoiseRe = regexp.MustCompile(`^[\d*\s:./-]*$`)
 	nameAcctRe     = regexp.MustCompile(`^[A-Za-z ,.'-]+:\s*[\d*]+$`) // "NAME SURNAME:9017467883"
 )
@@ -22,6 +25,10 @@ var (
 // Keeping them apart lets purpose words decide a payment without the name triggering rules
 // ("Grace Food Ventures" is a name, not a food purchase).
 func SplitMemo(desc string) (counterparty, purpose string) {
+	if m := frmToMemoRe.FindStringSubmatch(desc); m != nil {
+		counterparty = strings.Join(strings.Fields(m[2]), " ")
+		return counterparty, cleanPurpose(m[1], counterparty)
+	}
 	for _, re := range []*regexp.Regexp{pipeMemoRe, dashMemoRe, nipMemoRe} {
 		m := re.FindStringSubmatch(desc)
 		if m == nil {

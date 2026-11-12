@@ -324,11 +324,11 @@ func nameTokens(name string) []string {
 	return strings.Fields(clean)
 }
 
-// honorifics are dropped before comparing names: "MR JOSEPH ADEWUNMI" is "JOSEPH ADEWUNMI".
+// honorifics are dropped before comparing names: "MR TUNDE BAKARE" is "TUNDE BAKARE".
 var honorifics = map[string]bool{"mr": true, "mrs": true, "miss": true, "ms": true, "dr": true, "chief": true, "engr": true, "prof": true, "alhaji": true, "alhaja": true, "pastor": true}
 
 // personTokens are a name's tokens without honorifics, with tokens that are two of the holder's
-// names run together ("JOSEPHADEDEJI") split back apart.
+// names run together ("TUNDEOLUMIDE") split back apart.
 func personTokens(name string, holder []string) []string {
 	var out []string
 	for _, t := range nameTokens(name) {
@@ -573,7 +573,7 @@ func mentionsHolderAsCounterparty(holder []string, desc string) bool {
 		return false
 	}
 	for _, m := range holderMentionRe.FindAllStringSubmatch(desc, -1) {
-		// "PIGGYVEST/JOSEPH ADEWUNMI" is a business's collection account opened in the holder's
+		// "PIGGYVEST/TUNDE BAKARE" is a business's collection account opened in the holder's
 		// name: the money went to the business, so only the part before any "/" can be the holder.
 		target := strings.SplitN(m[1], "/", 2)[0]
 		for _, seg := range segmentSplitRe.Split(target, -1) {

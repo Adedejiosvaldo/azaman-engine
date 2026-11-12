@@ -177,9 +177,17 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 // Without a purpose, only merchant rules are matched against the counterparty's name.
 func selectRule(cleaned, counterparty, purpose string, isCredit bool) (rule *MerchantRule, basis string, purchaseGuess bool) {
 	if counterparty == "" {
-		return FindRuleByKeyword(cleaned), "", false
+		// A card, web or bank-written row. A named merchant decides it; failing that a trade word
+		// in the name ("Family Care Clinic") beats generic purpose words ("family").
+		if r := FindMerchantRule(cleaned); r != nil {
+			return r, "", false
+		}
+		if _, _, ok := IndustryCategory(cleaned); ok {
+			return nil, "", false
+		}
+		return FindGenericRule(cleaned), "", false
 	}
-	// Paying a known business ("PIGGYVEST/JOSEPH ADEWUNMI", "CHOWDECK/...") is decided by who was
+	// Paying a known business ("PIGGYVEST/TUNDE BAKARE", "CHOWDECK/...") is decided by who was
 	// paid: a purpose typed to Piggyvest does not make it a purchase or a gift.
 	if r := FindNameRule(counterparty); r != nil && (r.IsSavings || r.Confidence >= 0.95) {
 		return r, "name", false
@@ -225,8 +233,11 @@ func inferHeuristics(d *models.DecodedTransaction, cleaned string, rawMemo strin
 	}
 
 	// P2P vs. Commercial Vendor vs. POS Agent Disambiguation Heuristic
-	if toMatches := toNameRe.FindStringSubmatch(rawMemo); len(toMatches) > 1 {
-		name := strings.TrimSpace(toMatches[1])
+	name := d.Counterparty
+	if toMatches := toNameRe.FindStringSubmatch(rawMemo); name == "" && len(toMatches) > 1 {
+		name = strings.TrimSpace(toMatches[1])
+	}
+	if name != "" {
 		lowerName := strings.ToLower(name)
 
 		// 1. POS Cashout / Agency Banking check

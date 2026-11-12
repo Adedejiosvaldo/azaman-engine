@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -35,10 +36,14 @@ type DecodeMemoRequest struct {
 // maxStatements caps how many statements one audit accepts. The 32MB body cap still applies to all of them together.
 const maxStatements = 6
 
-// statementError is a per-file failure.
+// statementError is a per-file failure. Bank, format and reason are counted (see metrics.go)
+// and returned, so the landing page can offer "request this bank" for statements it can't read.
 type statementError struct {
 	status int
 	msg    string
+	bank   string // detected bank, or "Generic Bank"
+	format string // pdf, csv, xlsx...
+	reason string // password, unreadable, no_transactions, read_error
 }
 
 // parsedStatement is one uploaded file, parsed and decoded.
@@ -57,7 +62,16 @@ func HandleAudit(c *gin.Context) {
 
 	// 1. Collect uploaded files: repeated 'statements', or a single 'statement' / 'file'
 	var headers []*multipart.FileHeader
-	if form, err := c.MultipartForm(); err == nil && form != nil {
+	form, formErr := c.MultipartForm()
+	if formErr != nil && !errors.Is(formErr, http.ErrNotMultipart) {
+		// The body stopped arriving (slow connection, timeout) or was over the size cap.
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "The upload didn't finish. Check your connection and try again, or send fewer files at once.",
+			"session": sessionID,
+		})
+		return
+	}
+	if form != nil {
 		for _, key := range []string{"statements", "statement", "file"} {
 			if len(headers) == 0 {
 				headers = append(headers, form.File[key]...)
@@ -97,12 +111,12 @@ func HandleAudit(c *gin.Context) {
 	for i, fh := range headers {
 		st, serr := parseStatement(fh, pick(passwords, i, sharedPassword), pick(banks, i, sharedBank), accountHolder)
 		if serr != nil {
-			body := gin.H{"error": serr.msg, "session": sessionID}
+			body := gin.H{"error": serr.msg, "session": sessionID, "bank": serr.bank, "format": serr.format, "reason": serr.reason}
 			if len(headers) > 1 {
 				body["file"] = fh.Filename
 				body["file_index"] = i
 			}
-			recordAuditFailure()
+			recordAuditFailure(serr.bank, serr.reason)
 			c.JSON(serr.status, body)
 			return
 		}
@@ -186,7 +200,7 @@ func HandleAudit(c *gin.Context) {
 		compactReport(&audit)
 	}
 
-	recordAudit(len(statements))
+	recordAudit(accounts)
 	c.Header("X-Session-ID", sessionID)
 	c.Header("X-Response-Time", time.Since(startTime).String())
 	c.JSON(http.StatusOK, audit)
@@ -195,8 +209,24 @@ func HandleAudit(c *gin.Context) {
 // parseStatement reads one uploaded file into RAM, detects its bank and holder, parses and decodes it.
 // The file buffer and the raw rows are scrubbed before it returns.
 func parseStatement(fh *multipart.FileHeader, password, bankOverride, accountHolder string) (parsedStatement, *statementError) {
+	var bankName string
+	fileExt := strings.ToLower(filepath.Ext(fh.Filename))
 	fail := func(status int, msg string) (parsedStatement, *statementError) {
-		return parsedStatement{}, &statementError{status: status, msg: msg}
+		reason := "unreadable"
+		switch lower := strings.ToLower(msg); {
+		case status >= 500:
+			reason = "read_error"
+		case strings.Contains(lower, "password") || strings.Contains(lower, "encrypted"):
+			reason = "password"
+		case strings.Contains(lower, "no transactions"):
+			reason = "no_transactions"
+		}
+		bank := bankName
+		if bank == "" {
+			bank = parser.BankGeneric
+		}
+		return parsedStatement{}, &statementError{status: status, msg: msg, bank: bank,
+			format: strings.TrimPrefix(fileExt, "."), reason: reason}
 	}
 
 	file, err := fh.Open()
@@ -214,13 +244,12 @@ func parseStatement(fh *multipart.FileHeader, password, bankOverride, accountHol
 		ephemeral.ForceEphemeralCleanup()
 	}()
 
-	fileExt := strings.ToLower(filepath.Ext(fh.Filename))
 	sample := fileBytes
 	if len(sample) > 4096 {
 		sample = sample[:4096]
 	}
 
-	bankName := bankOverride
+	bankName = bankOverride
 	if bankName == "" {
 		bankName = parser.DetectBankFromFilename(fh.Filename)
 	}
@@ -248,14 +277,31 @@ func parseStatement(fh *multipart.FileHeader, password, bankOverride, accountHol
 			bankName = detectedBank
 		}
 	case ".xlsx", ".xls":
-		rawTransactions, err = parser.ParseXLSX(fileBytes, bankName)
+		var sheet parser.Sheet
+		sheet, err = parser.ParseXLSX(fileBytes, bankName)
 		if err != nil {
 			return fail(http.StatusUnprocessableEntity, "Excel statement extraction failed: "+err.Error())
 		}
+		rawTransactions, check = sheet.Txs, sheet.Check
+		// A workbook is a zip: its bank and holder are only readable once the sheet is open.
+		if bankOverride == "" && sheet.Bank != "" {
+			bankName = sheet.Bank
+		}
+		if accountHolder == "" {
+			accountHolder = sheet.Holder
+		}
 	default: // .csv, .txt, .tsv or generic stream
-		rawTransactions, err = parser.ParseCSV(bytes.NewReader(fileBytes), bankName)
+		var sheet parser.Sheet
+		sheet, err = parser.ParseCSV(bytes.NewReader(fileBytes), bankName)
 		if err != nil {
 			return fail(http.StatusUnprocessableEntity, "CSV statement extraction failed: "+err.Error())
+		}
+		rawTransactions, check = sheet.Txs, sheet.Check
+		if bankOverride == "" && sheet.Bank != "" {
+			bankName = sheet.Bank
+		}
+		if accountHolder == "" {
+			accountHolder = sheet.Holder
 		}
 	}
 	defer ephemeral.ScrubRawTransactions(rawTransactions)

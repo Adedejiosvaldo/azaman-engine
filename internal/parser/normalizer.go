@@ -8,86 +8,92 @@ import (
 )
 
 var (
-	// Known date formats commonly used in Nigerian and international statements
-	dateFormats = []string{
-		"02-Jan-2006",
-		"02-Jan-06",
-		"02/Jan/2006",
-		"02-JAN-2006",
-		"2-Jan-2006",
-		"02/01/2006",
-		"2/1/2006",
-		"02/01/06",
-		"2006-01-02",
-		"2006/01/02",
-		"02-01-2006",
-		"02 Jan 2006",
-		"Jan 02, 2006",
-		"Jan 2, 2006",
-		"January 02, 2006",
-		"January 2, 2006",
-		"02/01/2006 15:04:05",
-		"02/01/2006 15:04",
-		"02/01/2006 03:04 PM",
-		"02/01/2006 3:04 PM",
-		"2006-01-02 15:04:05",
-		"2006-01-02 15:04",
-		"2006-01-02T15:04:05Z",
-		"2006-01-02T15:04:05",
-		"02 Jan 2006 15:04:05",
-		"02 Jan 2006 15:04",
-		"2 Jan 2006 15:04:05",
-		"2 Jan 2006 15:04",
-		"02-Jan-2006 15:04:05",
-		"02-Jan-2006 15:04",
-		// Additional layouts seen on Zenith, First Bank, UBA, PalmPay and Moniepoint exports
-		"02-Jan-06 15:04:05",
-		"02-Jan-06 15:04",
-		"02 Jan 2006, 15:04",
-		"02 Jan 2006, 15:04:05",
-		"02 Jan 2006 03:04 PM",
-		"02 Jan 2006 3:04 PM",
-		"Jan 2, 2006 15:04",
-		"Jan 2, 2006 3:04 PM",
-		"Jan 02 2006",
-		"02 January 2006",
-		"2 January 2006",
-		"Mon, 02 Jan 2006 15:04:05",
-		"Monday, January 2, 2006",
-		"02.01.2006",
-		"02.01.2006 15:04",
-		"02-01-2006 15:04:05",
-		"02-01-2006 15:04",
-		"02/01/2006 15:04:05 PM",
-		"2006-01-02T15:04:05.000Z",
-		"2006-01-02T15:04:05Z07:00",
-		"2006-01-02 15:04:05.000",
-		"20060102",
-	}
-
 	amountSanitizeRe = regexp.MustCompile(`[₦$€£,\s"']`)
 	currencyCodeRe   = regexp.MustCompile(`(?i)NGN|USD|GBP|EUR`)
 )
 
-// ParseDate attempts to parse a string using known Nigerian and international date formats.
+// Date layouts (no time). Day comes before month, as Nigerian banks write it; month-first is
+// tried last for dollar-account exports ("01/15/2026").
+var dateOnlyLayouts = []string{
+	"02-Jan-2006", "2-Jan-2006", "02-Jan-06", "2-Jan-06", "02/Jan/2006", "02/Jan/06", "02Jan2006",
+	"02/01/2006", "2/1/2006", "02/01/06", "2/1/06",
+	"2006-01-02", "2006/01/02", "2006.01.02",
+	"02-01-2006", "2-1-2006", "02-01-06",
+	"02.01.2006", "02.01.06",
+	"02 Jan 2006", "2 Jan 2006", "02 Jan 06", "2 Jan 06", "02 January 2006", "2 January 2006",
+	"Jan 02 2006", "Jan 2 2006", "January 02 2006", "January 2 2006",
+	"20060102",
+	"01/02/2006", "1/2/2006",
+}
+
+var timeLayouts = []string{"15:04:05", "15:04", "3:04:05 PM", "3:04 PM", "3:04:05PM", "3:04PM", "15:04:05 PM"}
+
+var (
+	// "10:15", "10:15:22", "10:15:22.123", "3:04 PM", with an optional zone the layouts ignore
+	timePartRe = regexp.MustCompile(`(?i)[ T](\d{1,2}:\d{2}(?::\d{2})?)(?:\.\d+)?\s?([AP]M)?(?:\s?(?:Z|WAT|GMT|UTC|[+-]\d{2}:?\d{2}))?$`)
+	ordinalRe  = regexp.MustCompile(`(?i)\b(\d{1,2})(?:st|nd|rd|th)\b`)
+	weekdayRe  = regexp.MustCompile(`(?i)^(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)[a-z]*[, ]+`)
+	monthFixRe = strings.NewReplacer("Sept ", "Sep ", "Sept-", "Sep-", "Sept/", "Sep/")
+)
+
+// ParseDate reads a date, with or without a time, in the formats banks print. The date and the
+// time are parsed separately, so any date style combines with any time style. Years outside
+// 1990 to next year are rejected: an eight-digit reference is not a date.
 func ParseDate(dateStr string) (time.Time, bool) {
-	trimmed := strings.TrimSpace(dateStr)
-	if trimmed == "" {
+	s := strings.TrimSpace(dateStr)
+	if len(s) < 6 || len(s) > 40 {
 		return time.Time{}, false
 	}
+	s = strings.Join(strings.Fields(strings.ReplaceAll(s, ",", " ")), " ")
+	s = weekdayRe.ReplaceAllString(s, "")
+	s = ordinalRe.ReplaceAllString(s, "$1")
 
-	// Try direct uppercase matching (for 02-JAN-2024)
-	for _, layout := range dateFormats {
-		if t, err := time.Parse(layout, trimmed); err == nil {
-			return t, true
+	clock := ""
+	if m := timePartRe.FindStringSubmatchIndex(s); m != nil {
+		clock = s[m[2]:m[3]]
+		if m[4] >= 0 {
+			clock += " " + strings.ToUpper(s[m[4]:m[5]])
 		}
-		// Try case-insensitive matching by title casing month (e.g. 15-jan-2024 -> 15-Jan-2024)
-		if t, err := time.Parse(layout, strings.Title(strings.ToLower(trimmed))); err == nil {
-			return t, true
-		}
+		s = strings.TrimSpace(s[:m[0]])
 	}
 
+	// Month names in any case: "02-JAN-2024", "02-jan-2024" -> "02-Jan-2024"
+	s = monthFixRe.Replace(titleWords(s) + " ")
+	s = strings.TrimSpace(s)
+
+	for _, layout := range dateOnlyLayouts {
+		day, err := time.Parse(layout, s)
+		if err != nil {
+			continue
+		}
+		if y := day.Year(); y < 1990 || y > time.Now().Year()+1 {
+			continue
+		}
+		if clock == "" {
+			return day, true
+		}
+		for _, tl := range timeLayouts {
+			if t, err := time.Parse(tl, clock); err == nil {
+				return day.Add(time.Duration(t.Hour())*time.Hour + time.Duration(t.Minute())*time.Minute + time.Duration(t.Second())*time.Second), true
+			}
+		}
+		return day, true // unreadable time: keep the date
+	}
 	return time.Time{}, false
+}
+
+// titleWords upper-cases the first letter of each run of letters and lower-cases the rest.
+func titleWords(s string) string {
+	out := []rune(strings.ToLower(s))
+	start := true
+	for i, r := range out {
+		letter := r >= 'a' && r <= 'z'
+		if letter && start {
+			out[i] = r - 'a' + 'A'
+		}
+		start = !letter
+	}
+	return string(out)
 }
 
 // ParseAmount parses an amount string into a float64.

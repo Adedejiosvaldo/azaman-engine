@@ -1,0 +1,69 @@
+# Tests every push to any branch and every pull request. Only main is deployed, and only when
+# its tests pass.
+#
+# Needs these repository secrets (Settings -> Secrets and variables -> Actions). They are never
+# shown in logs and never available to pull requests from forks.
+#   VPS_HOST         server IP or hostname
+#   VPS_USER         SSH user (e.g. root)
+#   VPS_SSH_KEY      private key whose public half is in the server's ~/.ssh/authorized_keys
+#   VPS_KNOWN_HOSTS  output of: ssh-keyscan -t ed25519 <VPS_HOST>   (pins the server's identity)
+name: test-and-deploy
+
+on:
+  push:
+    branches: ["**"] # every branch: feedback before a PR is even opened
+  pull_request: # the PR shows a pass/fail check, including PRs from forks (tests only, no secrets)
+  workflow_dispatch: # "Run workflow" button: redeploy without a new commit
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # never cut a deploy off halfway
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Go vet and tests
+        run: |
+          go vet ./...
+          go test ./...
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sidecar tests (fallback mode, no model download)
+        run: |
+          pip install --quiet fastapi uvicorn pydantic httpx
+          python -m unittest sidecar.test_laya_service
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+        # The script runs from this commit, so a fix to deploy.sh takes effect on the same push.
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "$USER@$HOST" 'bash -s' < deploy/deploy.sh
+      - name: Remove key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

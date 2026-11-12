@@ -62,7 +62,7 @@
 {"memo": "Transfer to REMITA PAYMENT SERVICES | GTBank | 8427910944", "amount": 9000, "hour": null, "want": "Bills & Online Payments", "alt": [], "kind": "business", "split": "test"}
 {"memo": "Merchant payment 00183", "amount": 9000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "dev"}
 {"memo": "TRF/REF 003991827/IFO", "amount": 7000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary"], "kind": "unknown", "split": "test"}
-{"memo": "Transfer to FAVOUR IFEOLUWA BALOGUN | Kuda MFB | 1450024945", "amount": 10000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
+{"memo": "Transfer to SEUN ADUNNI BALOGUN | Kuda MFB | 1450024945", "amount": 10000, "hour": null, "want": "PERSON", "alt": [], "kind": "person", "split": "dev"}
 {"memo": "Transfer to IYA BASIRAT BUKA VENTURES | GTBank | 5071050724", "amount": 4500, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "test"}
 {"memo": "Card Payment: Udemy Online Course", "amount": 15000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
 {"memo": "LCC Toll Lekki Plaza", "amount": 500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
