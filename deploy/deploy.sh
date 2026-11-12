@@ -13,13 +13,14 @@ cd "$APP_DIR"
 
 log() { printf '[deploy] %s\n' "$*"; }
 
-# Local edits to tracked files would be overwritten or block the pull: stop and say so rather
-# than guess. Settings belong in deploy/.env, which git ignores.
+# Hand edits to tracked files on the server would block the update. Set them aside (nothing is
+# lost: "git stash list" shows them, "git stash show -p" prints them) and deploy main as it is.
+# Server settings belong in deploy/.env, which git ignores and this never touches.
 if ! git diff --quiet || ! git diff --cached --quiet; then
-  log "Local changes to tracked files on the server:"
+  log "Setting aside hand edits on the server:"
   git status --short --untracked-files=no
-  log "Move settings into deploy/.env (or run: git checkout -- <file>), then deploy again."
-  exit 1
+  git stash push --quiet -m "deploy $(date -u +%Y-%m-%dT%H:%MZ): hand edits set aside"
+  log "Saved in git stash. Put settings in deploy/.env instead (e.g. AZAMAN_MEM_LIMIT, LAYA_DISABLE)."
 fi
 
 prev=$(git rev-parse HEAD)
