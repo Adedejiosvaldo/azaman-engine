@@ -46,7 +46,7 @@ func gtbPage() []pdf.Text {
 }
 
 func TestParseTablePDFGTBankTopAligned(t *testing.T) {
-	txs := parseTablePDF([][]pdf.Text{gtbPage()}, BankGTB, "NGN")
+	txs, _ := parseTablePDF([][]pdf.Text{gtbPage()}, BankGTB, "NGN")
 	if len(txs) != 3 {
 		t.Fatalf("expected 3 transactions (no header/period/opening rows), got %d: %+v", len(txs), txs)
 	}
@@ -81,7 +81,7 @@ func TestParseTablePDFCentredLayout(t *testing.T) {
 		run(30, 656, "11-Aug-2026"), run(250, 656, "1,000.00"), run(300, 656, "2,441.35"),
 		run(420, 650, "OPAY"),
 	)
-	txs := parseTablePDF([][]pdf.Text{page}, "", "NGN")
+	txs, _ := parseTablePDF([][]pdf.Text{page}, "", "NGN")
 	if len(txs) != 2 {
 		t.Fatalf("expected 2 transactions, got %d", len(txs))
 	}
@@ -92,7 +92,7 @@ func TestParseTablePDFCentredLayout(t *testing.T) {
 
 func TestParseTablePDFNeedsHeader(t *testing.T) {
 	page := []pdf.Text{run(30, 676, "10-Aug-2026"), run(200, 676, "3,558.65")}
-	if txs := parseTablePDF([][]pdf.Text{page}, "", "NGN"); len(txs) != 0 {
+	if txs, _ := parseTablePDF([][]pdf.Text{page}, "", "NGN"); len(txs) != 0 {
 		t.Errorf("without a Debit/Credit/Balance header the table parser must not guess, got %d rows", len(txs))
 	}
 }
@@ -112,7 +112,7 @@ func TestParseTablePDFDateOnSecondRemarksLine(t *testing.T) {
 
 		run(30, 636, "10-Aug-2026"), run(200, 636, "50.00"), run(300, 636, "491.35"), run(420, 636, "Commission on NIP Transfer"),
 	)
-	txs := parseTablePDF([][]pdf.Text{page}, BankGTB, "NGN")
+	txs, _ := parseTablePDF([][]pdf.Text{page}, BankGTB, "NGN")
 	want := []string{
 		"POSWEB PURCHASE TRANSACTION WEB PUR 3PG00012 OPAY CHARGE 539983***9983",
 		"POSWEB PURCHASE TRANSACTION WEB PUR ANTHROPIC CLAUDE SUB G0A3LMSE",

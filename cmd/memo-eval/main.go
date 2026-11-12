@@ -130,6 +130,55 @@ func (m marginFilter) ClassifyBatch(items []ai.LayaMemoItem) (map[string]ai.Laya
 	return out, err
 }
 
+// modelAlone asks the model about every memo (person-to-person transfers excluded, as in a real
+// audit) and scores its answers with no help from the rules. The model may decline when its top
+// two choices are close; each margin line shows how many it answers and how many of those are right.
+func modelAlone(rows []row, client ai.Classifier) {
+	txs := decode(rows)
+	var items []ai.LayaMemoItem
+	want := map[string]row{}
+	for i, tx := range txs {
+		if rows[i].Kind == "person" {
+			continue
+		}
+		text := ai.CleanForAI(ai.Text(tx), "")
+		if text == "" {
+			continue
+		}
+		id := fmt.Sprint(i)
+		items = append(items, ai.LayaMemoItem{ID: id, Memo: text, Amount: rows[i].Amount, Hour: rows[i].Hour, Currency: "NGN"})
+		want[id] = rows[i]
+	}
+
+	answers := map[string]ai.LayaDecision{}
+	start := time.Now()
+	for i := 0; i < len(items); i += 25 {
+		got, err := client.ClassifyBatch(items[i:min(i+25, len(items))])
+		if err != nil {
+			log.Fatal(err)
+		}
+		for id, d := range got {
+			answers[id] = d
+		}
+	}
+	took := time.Since(start)
+	fmt.Printf("model alone: %d memos in %s (%.1fs per memo)\n\n", len(items), took.Round(time.Second), took.Seconds()/float64(len(items)))
+	fmt.Printf("  %-12s %-20s %-22s\n", "min margin", "answered", "right, of answered")
+	for _, m := range []float64{0, 0.3, 0.5, 0.7, 0.9} {
+		var s score
+		for id, d := range answers {
+			if d.Margin == nil || *d.Margin < m {
+				continue
+			}
+			s.total++
+			if want[id].ok(d.Category) {
+				s.right++
+			}
+		}
+		fmt.Printf("  %-12.2f %-20s %-22s\n", m, score{s.total, len(items)}, s)
+	}
+}
+
 type score struct{ right, total int }
 
 func (s score) String() string {
@@ -146,6 +195,7 @@ func main() {
 	timeout := flag.Duration("timeout", 30*time.Second, "AI request timeout (generous: this measures quality, not speed)")
 	verbose := flag.Bool("v", false, "list every row the AI changed")
 	margin := flag.Float64("margin", 0, "ignore model answers whose top-vs-runner-up margin is below this")
+	alone := flag.Bool("alone", false, "score the model by itself on every memo, ignoring the rules (run the sidecar with LAYA_MIN_MARGIN=0)")
 	flag.Parse()
 
 	rows := load(*data, *split)
@@ -156,6 +206,14 @@ func main() {
 			log.Fatalf("no Laya sidecar answering at %s", *layaURL)
 		}
 		client = marginFilter{inner: c, min: *margin}
+	}
+
+	if *alone {
+		if client == nil {
+			log.Fatal("-alone needs -laya")
+		}
+		modelAlone(rows, client.(marginFilter).inner)
+		return
 	}
 
 	fmt.Printf("%d memos (split=%s, margin=%.2f)\n\n", len(rows), *split, *margin)

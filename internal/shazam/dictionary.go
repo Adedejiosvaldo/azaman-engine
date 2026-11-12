@@ -16,6 +16,9 @@ type MerchantRule struct {
 	IsLoan         bool     // Loan app (credit = disbursement, debit = repayment)
 	IsSelfTransfer bool     // Money moving between the holder's own accounts (not spend or income)
 	PurposeOnly    bool     // Generic words ("mama", "rent", "chop"): match the memo purpose, never a person's name
+	Gateway        bool     // Payment gateway (Paystack, Remita): says how it was paid, not what for; any merchant beats it
+	WholeWord      bool     // Patterns match whole words only, whatever their length ("mobil" is not "mobile")
+	CardOnly       bool     // A name people also carry ("Zara", "Nike"): match card and web payments, never a transfer's recipient
 	Confidence     float64  // Base confidence score
 }
 
@@ -364,7 +367,8 @@ var MerchantRegistry = []MerchantRule{
 		Confidence:     0.95,
 	},
 	{
-		Patterns:       []string{"paystack"},
+		Patterns:       []string{"paystack", "pstk"},
+		Gateway:        true,
 		Merchant:       "Paystack Checkout",
 		Category:       "Shopping & Retail",
 		Classification: "Personal Discretionary",
@@ -440,6 +444,7 @@ var MerchantRegistry = []MerchantRule{
 
 	{
 		Patterns:       []string{"coralpay", "nextgen pg", "remita", "interswitch", "quickteller", "monnify", "flutterwave", "opay pos", "buypower", "vtpass", "baxi"},
+		Gateway:        true,
 		Merchant:       "Bills & Payment Gateway",
 		Category:       "Bills & Online Payments",
 		Classification: "Essential Living",
@@ -538,33 +543,7 @@ var MerchantRegistry = []MerchantRule{
 		Confidence:     0.95,
 	},
 
-	// ==================== PIDGIN / SLANG PURPOSE MEMOS ====================
-	{
-		Patterns:       []string{"t fare", "tfare", "t-fare", "tf", "transport fare", "transpo", "okada", "keke", "danfo", "brt"},
-		Merchant:       "Transport Fare",
-		PurposeOnly:    true,
-		Category:       "Commute & Transit",
-		Classification: "Essential Living",
-		Confidence:     0.9,
-	},
-	{
-		Patterns:       []string{"chop money", "chop", "food money", "soup money", "market money", "foodstuff", "foodstuffs"},
-		Merchant:       "Food & Market Money",
-		PurposeOnly:    true,
-		Category:       "Food & Dining",
-		Classification: "Essential Living",
-		Confidence:     0.9,
-	},
-	{
-		Patterns:       []string{"hair", "barbing", "barber", "makeup", "nails", "lashes"},
-		Merchant:       "Personal Care & Grooming",
-		PurposeOnly:    true,
-		Category:       "Personal Care",
-		Classification: "Personal Discretionary",
-		Confidence:     0.88,
-	},
-
-	// ==================== FAMILY & URGENT 2K FAVORS ====================
+	// An explicit plea outranks whatever it was for ("urgent 2k for food").
 	{
 		Patterns:       []string{"urgent 2k", "urgent2k", "urgent 5k", "urgent 10k", "abeg", "borrow me", "small money", "help me", "sapa", "emergency"},
 		Merchant:       "Urgent 2k Favors",
@@ -573,11 +552,77 @@ var MerchantRegistry = []MerchantRule{
 		Classification: "Micro-Transfer (Urgent 2k)",
 		Confidence:     0.99,
 	},
+
+	// ==================== PIDGIN / SLANG PURPOSE MEMOS ====================
+	{
+		Patterns: []string{"t fare", "tfare", "t-fare", "tf", "transport fare", "transpo", "okada", "keke", "danfo", "brt",
+			"transport", "bus fare", "cab", "taxi", "flight", "flight ticket", "bike man", "dispatch", "delivery fee", "waybill"},
+		Merchant:       "Transport Fare",
+		PurposeOnly:    true,
+		Category:       "Commute & Transit",
+		Classification: "Essential Living",
+		Confidence:     0.9,
+	},
+	{
+		Patterns: []string{"chop money", "chop", "food money", "soup money", "market money", "foodstuff", "foodstuffs",
+			"food", "lunch", "breakfast", "dinner", "groceries", "provisions", "rice", "garri", "meat", "fish", "bread", "snacks"},
+		Merchant:       "Food & Market Money",
+		PurposeOnly:    true,
+		Category:       "Food & Dining",
+		Classification: "Essential Living",
+		Confidence:     0.9,
+	},
+	{
+		Patterns:       []string{"hair", "barbing", "barber", "makeup", "nails", "lashes", "gym", "wig", "braids", "haircut", "facial"},
+		Merchant:       "Personal Care & Grooming",
+		PurposeOnly:    true,
+		Category:       "Personal Care",
+		Classification: "Personal Discretionary",
+		Confidence:     0.88,
+	},
+
+	{
+		Patterns: []string{"hospital bill", "hospital", "clinic", "drugs", "medication", "medicine", "malaria", "typhoid",
+			"lab test", "test and drugs", "scan", "x-ray", "xray", "dental", "dentist", "antenatal", "surgery", "doctor",
+			"eye test", "glasses", "treatment", "checkup", "check up", "injection", "physio", "hmo"},
+		Merchant:       "Health & Medical",
+		PurposeOnly:    true,
+		Category:       "Health & Medical",
+		Classification: "Essential Living",
+		Confidence:     0.9,
+	},
+	{
+		Patterns:       []string{"data", "light", "wifi", "internet", "sub", "recharge", "airtime", "meter", "gas"},
+		Merchant:       "Airtime, Data & Light",
+		PurposeOnly:    true,
+		Category:       "Airtime & Utilities",
+		Classification: "Essential Living",
+		Confidence:     0.9,
+	},
+	{
+		Patterns:       []string{"lesson", "tutor", "handout", "school", "exam", "project", "course", "training", "certification"},
+		Merchant:       "School & Learning",
+		PurposeOnly:    true,
+		Category:       "Education",
+		Classification: "Essential Living",
+		Confidence:     0.88,
+	},
+	{
+		Patterns:       []string{"refund", "borrowed", "money borrowed", "debt", "pay back", "payback", "owe", "owed", "repayment"},
+		Merchant:       "Debt Repayment",
+		PurposeOnly:    true,
+		IsLoan:         true,
+		Category:       "Loans & Debt Service",
+		Classification: "Debt Service",
+		Confidence:     0.88,
+	},
+
+	// ==================== FAMILY & URGENT 2K FAVORS ====================
 	{
 		Patterns: []string{"mum", "dad", "mama", "papa", "mummy", "daddy", "brother", "sister", "family", "house upkeep", "upkeep",
 			"feeding", "iya", "baba", "aunty", "uncle", "pikin", "my wife", "my husband", "black tax",
-			"allowance", "gift", "birthday", "sallah", "ileya", "xmas", "christmas", "hospital bill", "support", "assistance", "for you",
-			"for the week", "weekly", "happy", "enjoy", "bday", "treatment", "thank"},
+			"allowance", "gift", "birthday", "sallah", "ileya", "xmas", "christmas", "support", "assistance", "for you", "pocket money", "wedding",
+			"for the week", "weekly", "happy", "enjoy", "bday", "thank"},
 		Merchant:       "Family Upkeep",
 		PurposeOnly:    true,
 		Category:       "Family & Favors",
@@ -586,22 +631,27 @@ var MerchantRegistry = []MerchantRule{
 	},
 }
 
+// Rules are matched in three passes, most telling first:
+//  1. merchants and brands: the name says what the money bought;
+//  2. payment gateways: only how it was paid, used when no merchant is named;
+//  3. purpose words ("mama", "rent", "chop"): generic, and never matched against a person's name.
+// Within a pass the first rule in the registry wins.
+
+// FindMerchantRule returns the merchant or brand named in the text, ignoring gateways and
+// purpose words.
+func FindMerchantRule(text string) *MerchantRule {
+	lower := strings.ToLower(text)
+	return firstRule(lower, func(r *MerchantRule) bool { return !r.PurposeOnly && !r.Gateway })
+}
+
 // FindNameRule matches a counterparty's name against merchant rules only (church names, payment
 // gateways, known stores), skipping PurposeOnly rules whose generic words would misfire on names.
 func FindNameRule(name string) *MerchantRule {
 	lower := strings.ToLower(name)
-	for i := range MerchantRegistry {
-		rule := &MerchantRegistry[i]
-		if rule.PurposeOnly {
-			continue
-		}
-		for _, pattern := range rule.Patterns {
-			if matchPattern(lower, pattern) {
-				return rule
-			}
-		}
+	if r := firstRule(lower, func(r *MerchantRule) bool { return !r.PurposeOnly && !r.Gateway && !r.CardOnly }); r != nil {
+		return r
 	}
-	return nil
+	return firstRule(lower, func(r *MerchantRule) bool { return r.Gateway })
 }
 
 // FindRuleByKeyword returns the best matching rule for the cleaned memo.
@@ -609,10 +659,30 @@ func FindNameRule(name string) *MerchantRule {
 // "global", "private" and "scott" do not trigger false positives.
 func FindRuleByKeyword(memo string) *MerchantRule {
 	lower := strings.ToLower(memo)
+	if r := firstRule(lower, func(r *MerchantRule) bool { return !r.PurposeOnly && !r.Gateway }); r != nil {
+		return r
+	}
+	return FindGenericRule(memo)
+}
+
+// FindGenericRule matches only gateways and purpose words: what is left to go on when the text
+// names no merchant.
+func FindGenericRule(memo string) *MerchantRule {
+	lower := strings.ToLower(memo)
+	if r := firstRule(lower, func(r *MerchantRule) bool { return r.Gateway }); r != nil {
+		return r
+	}
+	return firstRule(lower, func(r *MerchantRule) bool { return r.PurposeOnly })
+}
+
+func firstRule(lower string, eligible func(*MerchantRule) bool) *MerchantRule {
 	for i := range MerchantRegistry {
 		rule := &MerchantRegistry[i]
+		if !eligible(rule) {
+			continue
+		}
 		for _, pattern := range rule.Patterns {
-			if matchPattern(lower, pattern) {
+			if rule.WholeWord && ContainsWord(lower, pattern) || !rule.WholeWord && matchPattern(lower, pattern) {
 				return rule
 			}
 		}

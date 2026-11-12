@@ -39,6 +39,7 @@ var categoryBucket = map[string]string{
 	"Recurring Obligations":      "essentials",
 	"Religious Giving":           "essentials",
 	"Loans & Debt Service":       "essentials",
+	"Health & Medical":           "essentials",
 
 	"Shopping & Retail":      "lifestyle",
 	"Personal Care":          "lifestyle",

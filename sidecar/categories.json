@@ -82,6 +82,11 @@
       "description": "ajo, esusu, adashe, cooperative and thrift contributions"
     },
     {
+      "name": "Health & Medical",
+      "assignable": true,
+      "description": "hospitals, clinics, pharmacies, lab tests, HMO premiums, drugs"
+    },
+    {
       "name": "Personal Care",
       "assignable": true,
       "description": "hair, barbing, makeup, grooming"

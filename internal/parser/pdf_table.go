@@ -21,9 +21,14 @@ const (
 	colBalance   = "balance"
 	colBranch    = "branch"
 	colRemarks   = "remarks"
+	colAmount    = "amount" // one signed column instead of separate debit and credit
+	colParty     = "party"  // "To / From": who the money went to or came from
+	colType      = "type"   // says "Debit" / "Credit" for a single amount column
 )
 
-var tableAmountRe = regexp.MustCompile(`^[₦N]?-?\(?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?\)?(?:\s?(?:CR|DR))?$`)
+// An amount as drawn in a table cell: optional sign and currency, thousands separators or a plain
+// decimal, optional CR/DR suffix.
+var tableAmountRe = regexp.MustCompile(`^[+-]?\s?(?:[₦N$£€]|NGN|USD|GBP|EUR)?\s?[+-]?\(?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\)?(?:\s?(?:CR|DR|Cr|Dr))?$`)
 
 type tableColumn struct {
 	kind   string
@@ -40,38 +45,51 @@ type tableRow struct {
 	cells []tableCell
 }
 
-// parseTablePDF reads statements laid out as a table with a Debit / Credit / Balance header
-// (GTBank, Zenith, UBA, First Bank, Access...). Column positions come from the header row, so
+// parseTablePDF reads statements laid out as a table under a header row (GTBank, Zenith, UBA,
+// First Bank, Access, Kuda, Moniepoint, PalmPay...). Column positions come from the header, so
 // each value lands in the right column no matter how the text was drawn. Wrapped remarks are
-// assigned to the nearest transaction by windowing between the midpoints of date rows (GTBank
-// centres the date vertically, so remarks wrap both above and below it). Finally every row is
-// reconciled against the running balance.
-func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransaction {
+// assigned to their transaction by vertical spacing, including lines that run on to the next page.
+// Finally every row is reconciled against the running balance, and the totals printed on the
+// statement (when it has them) are returned for comparison.
+func parseTablePDF(pages [][]pdf.Text, bank, currency string) ([]models.RawTransaction, *models.StatementCheck) {
 	var columns []tableColumn
 	var results []models.RawTransaction
+	var stated *models.StatementCheck
 	openingBalance, haveOpening := 0.0, false
 
 	for _, runs := range pages {
 		rows := buildTableRows(runs)
 		start := 0
 		if idx, cols := findTableHeader(rows); idx >= 0 {
+			if stated == nil {
+				stated = statedTotals(rows[:idx])
+			}
+			if !haveOpening {
+				openingBalance, haveOpening = labelledAmount(rows[:idx], "opening balance", "balance b/f", "balance brought forward")
+			}
 			columns, start = cols, idx+1
 		}
 		if len(columns) == 0 {
-			continue // no header seen yet (cover page)
+			if stated == nil {
+				stated = statedTotals(rows) // summary on a cover page
+			}
+			continue // no header seen yet
 		}
 		body := rows[start:]
 
 		// Rows whose trans-date column holds a date start a transaction
 		var dateRows []int
 		for i, r := range body {
-			if _, ok := ParseDate(cellText(r, columns, colTransDate)); ok {
+			if _, _, ok := leadingDate(cellText(r, columns, colTransDate)); ok {
 				dateRows = append(dateRows, i)
 			} else if !haveOpening && len(dateRows) == 0 && strings.Contains(strings.ToLower(rowText(r)), "opening balance") {
 				if v, ok := firstAmount(r, columns, colBalance); ok {
 					openingBalance, haveOpening = v, true
 				}
 			}
+		}
+		if len(dateRows) == 0 {
+			continue
 		}
 
 		// Most banks (GTBank included) top-align a row: the date sits on the first remarks line and
@@ -82,9 +100,18 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 				topAligned++
 			}
 		}
-		useTop := len(dateRows) > 0 && topAligned*2 >= len(dateRows)
+		useTop := topAligned*2 >= len(dateRows)
 
-		blocks := remarkBlocks(body, columns, dateRows)
+		blocks, lead := remarkBlocks(body, columns, dateRows)
+		if blocks == nil && useTop {
+			lead = leadingRemarks(body[:dateRows[0]], columns)
+		}
+		// Remarks that ran over from the last transaction on the previous page
+		if len(lead) > 0 && len(results) > 0 {
+			last := &results[len(results)-1]
+			last.Description = strings.Join(strings.Fields(last.Description+" "+strings.Join(lead, " ")), " ")
+			last.RawLine = last.Date + " | " + last.Description
+		}
 
 		for k, ri := range dateRows {
 			y := body[ri].y
@@ -96,7 +123,7 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 				if k+1 < len(dateRows) {
 					lower = body[dateRows[k+1]].y + tol
 				} else {
-					lower = y - body[ri].lineHeight()*6 // last row on page: allow a few wrapped lines
+					lower = lastRowBottom(body[ri:], columns) // last row on page: its wrapped lines only
 				}
 			case len(dateRows) == 1:
 				upper, lower = y+body[ri].lineHeight()*3, y-body[ri].lineHeight()*3
@@ -112,10 +139,12 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 			}
 
 			tx := models.RawTransaction{Bank: bank, Currency: currency}
-			tx.Date = cellText(body[ri], columns, colTransDate)
+			var dateRest string
+			tx.Date, dateRest, _ = leadingDate(cellText(body[ri], columns, colTransDate))
 			tx.ParsedDate, _ = ParseDate(tx.Date)
 
-			var remarks, refs []string
+			var remarks, refs, party []string
+			amount, haveAmount, kind := 0.0, false, ""
 			for _, r := range body {
 				if r.y > upper || r.y <= lower {
 					continue
@@ -124,6 +153,8 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 					switch nearestColumn(c, columns) {
 					case colRemarks:
 						remarks = append(remarks, c.s)
+					case colParty:
+						party = append(party, c.s)
 					case colReference:
 						refs = append(refs, strings.TrimLeft(c.s, "'"))
 					case colDebit:
@@ -134,6 +165,17 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 						if v, ok := parseTableAmount(c.s); ok && tx.Credit == 0 {
 							tx.Credit = math.Abs(v)
 						}
+					case colAmount:
+						if v, ok := parseTableAmount(c.s); ok && !haveAmount {
+							amount, haveAmount = v, true
+							if strings.HasPrefix(strings.TrimSpace(c.s), "+") {
+								kind = "credit"
+							}
+						}
+					case colType:
+						if kind == "" {
+							kind = strings.ToLower(c.s)
+						}
 					case colBalance:
 						if v, ok := parseTableAmount(c.s); ok && tx.Balance == 0 {
 							tx.Balance = v
@@ -141,10 +183,16 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 					}
 				}
 			}
+			if haveAmount && tx.Debit == 0 && tx.Credit == 0 {
+				tx.Debit, tx.Credit = splitSignedAmount(amount, kind)
+			}
 			if blocks != nil {
 				remarks = blocks[k]
 			}
-			tx.Description = strings.Join(strings.Fields(strings.Join(remarks, " ")), " ")
+			if dateRest != "" {
+				remarks = append([]string{dateRest}, remarks...) // text drawn right after the date
+			}
+			tx.Description = strings.Join(strings.Fields(strings.Join(append(party, remarks...), " ")), " ")
 			tx.Reference = strings.Join(refs, " ")
 			if tx.Description == "" {
 				tx.Description = tx.Reference
@@ -155,12 +203,190 @@ func parseTablePDF(pages [][]pdf.Text, bank, currency string) []models.RawTransa
 	}
 
 	reconcileBalances(results, openingBalance, haveOpening)
-	return results
+	return results, stated
+}
+
+// splitSignedAmount turns a single amount column into debit or credit. A type column ("Debit",
+// "DR", "Money out") decides first, then the sign; an unsigned amount with no type is taken as a
+// credit and corrected from the running balance where there is one.
+func splitSignedAmount(amount float64, kind string) (debit, credit float64) {
+	has := func(words ...string) bool {
+		for _, w := range words {
+			if strings.Contains(kind, w) {
+				return true
+			}
+		}
+		return false
+	}
+	// Short codes count only as whole words: "subscription" contains "cr", "spending" contains "in".
+	word := func(codes ...string) bool {
+		for _, f := range strings.FieldsFunc(kind, func(r rune) bool { return r < 'a' || r > 'z' }) {
+			for _, c := range codes {
+				if f == c {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	switch {
+	case has("debit", "withdraw", "outflow", "sent", "payment", "purchase", "spend") || word("dr", "out", "d"):
+		return math.Abs(amount), 0
+	case has("credit", "deposit", "received", "inflow") || word("cr", "in", "c"):
+		return 0, math.Abs(amount)
+	case amount < 0:
+		return -amount, 0
+	}
+	return 0, amount
+}
+
+var leadingDateRes = []*regexp.Regexp{
+	// 01-Jan-2024 10:15:22, 01/02/2024 10:15 PM, 2024-01-02T10:15:22
+	regexp.MustCompile(`^\d{1,4}[-/.][A-Za-z0-9]{1,3}[-/.]\d{2,4}(?:[ T,]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)?`),
+	// 01 Jan 2024 10:15, 1st January 2024, 01 Jan, 2024 10:15
+	regexp.MustCompile(`^\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9},?\s+\d{2,4}(?:[ ,]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)?`),
+	// Jan 2, 2024 10:15 PM
+	regexp.MustCompile(`^[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}(?:[ ,]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)?`),
+}
+
+// leadingDate finds a date at the start of a cell. The cell is usually just the date, but two
+// columns drawn close together arrive as one cell ("01-Jan-2024 01-Jan-2024", or a date followed
+// by the first words of the narration). Returns the date text and whatever followed it.
+func leadingDate(cell string) (date, rest string, ok bool) {
+	cell = strings.TrimSpace(cell)
+	if cell == "" {
+		return "", "", false
+	}
+	if _, good := ParseDate(cell); good {
+		return cell, "", true
+	}
+	for _, re := range leadingDateRes {
+		m := re.FindString(cell)
+		if m == "" {
+			continue
+		}
+		if _, good := ParseDate(m); good {
+			rest = strings.TrimSpace(cell[len(m):])
+			// A value date drawn next to the trans date is not narration.
+			if _, isDate := ParseDate(rest); isDate {
+				rest = ""
+			}
+			return m, rest, true
+		}
+	}
+	return "", "", false
+}
+
+// lastRowBottom returns the y below which nothing belongs to the last transaction on a page: its
+// wrapped remark lines are evenly spaced, so the first wider gap (page footer, totals) ends it.
+func lastRowBottom(rows []tableRow, cols []tableColumn) float64 {
+	spacing := rows[0].lineHeight() * 1.7
+	bottom := rows[0].y
+	for _, r := range rows[1:] {
+		if bottom-r.y > spacing {
+			break
+		}
+		for _, c := range r.cells {
+			if k := nearestColumn(c, cols); k != colRemarks && k != colReference && k != colParty {
+				return bottom - 0.01 // a row of figures or labels: totals, closing balance
+			}
+		}
+		bottom = r.y
+	}
+	return bottom - 0.01
+}
+
+// leadingRemarks returns remark lines above the first transaction of a page: the tail of the
+// previous page's last transaction. Rows carrying figures or labels (balance brought forward,
+// repeated headers) are not remarks.
+func leadingRemarks(rows []tableRow, cols []tableColumn) []string {
+	var out []string
+	for _, r := range rows {
+		lower := strings.ToLower(rowText(r))
+		if strings.Contains(lower, "balance") || strings.Contains(lower, "page ") || strings.Contains(lower, "statement") {
+			continue
+		}
+		var parts []string
+		plain := true
+		for _, c := range r.cells {
+			if nearestColumn(c, cols) == colRemarks {
+				parts = append(parts, c.s)
+			} else {
+				plain = false
+			}
+		}
+		if plain && len(parts) > 0 {
+			out = append(out, strings.Join(parts, " "))
+		}
+	}
+	return out
+}
+
+// statedTotals reads the totals a statement prints about itself ("Total Debit 1,234.00"), from
+// the rows above the table. A value sits beside its label or directly beneath it.
+func statedTotals(rows []tableRow) *models.StatementCheck {
+	debit, ok1 := labelledAmount(rows, "total debit", "total withdrawal", "total money out", "total dr")
+	credit, ok2 := labelledAmount(rows, "total credit", "total deposit", "total lodgement", "total money in", "total cr")
+	if !ok1 || !ok2 {
+		return nil
+	}
+	return &models.StatementCheck{StatedDebit: math.Abs(debit), StatedCredit: math.Abs(credit)}
+}
+
+// labelledAmount finds the amount printed for a label: inside the same cell, the next cell to
+// the right, or else beneath it on the next row.
+func labelledAmount(rows []tableRow, labels ...string) (float64, bool) {
+	for i, r := range rows {
+		for j, c := range r.cells {
+			lower := strings.ToLower(c.s)
+			at := -1
+			for _, l := range labels {
+				if k := strings.Index(lower, l); k >= 0 {
+					at = k + len(l)
+					break
+				}
+			}
+			if at < 0 {
+				continue
+			}
+			// "Total Debit: 1,234.00" drawn as one cell
+			if tail := strings.Fields(strings.TrimLeft(c.s[at:], "s: ()")); len(tail) > 0 {
+				if v, ok := parseTableAmount(tail[len(tail)-1]); ok {
+					return v, true
+				}
+			}
+			if j+1 < len(r.cells) {
+				if v, ok := parseTableAmount(r.cells[j+1].s); ok {
+					return v, true
+				}
+			}
+			if i+1 < len(rows) {
+				best, found, dist := 0.0, false, math.Inf(1)
+				for _, under := range rows[i+1].cells {
+					if v, ok := parseTableAmount(under.s); ok {
+						if d := math.Abs(under.x - c.x); d < dist && d < 60 {
+							best, found, dist = v, true, d
+						}
+					}
+				}
+				if found {
+					return best, true
+				}
+			}
+		}
+	}
+	return 0, false
 }
 
 // reconcileBalances uses the running balance to fill in or correct debit/credit: the change in
 // balance is the most reliable amount on a statement, since it survives column misplacement.
+// Statements listed newest-first are walked from the bottom up.
 func reconcileBalances(txs []models.RawTransaction, opening float64, haveOpening bool) {
+	if newestFirst(txs) {
+		reverse(txs)
+		defer reverse(txs)
+		haveOpening = false // an opening balance belongs to the oldest row, which is now unknown
+	}
 	prev, havePrev := opening, haveOpening
 	for i := range txs {
 		tx := &txs[i]
@@ -186,6 +412,38 @@ func reconcileBalances(txs []models.RawTransaction, opening float64, haveOpening
 			prev, havePrev = tx.Balance, true
 		}
 	}
+}
+
+func reverse(txs []models.RawTransaction) {
+	for i, j := 0, len(txs)-1; i < j; i, j = i+1, j-1 {
+		txs[i], txs[j] = txs[j], txs[i]
+	}
+}
+
+// newestFirst reports whether a statement lists its latest transaction first, judged by which
+// direction makes the amounts agree with the running balance, then by the dates.
+func newestFirst(txs []models.RawTransaction) bool {
+	forward, backward := 0, 0
+	for i := 1; i < len(txs); i++ {
+		a, b := txs[i-1], txs[i]
+		if a.Balance == 0 || b.Balance == 0 {
+			continue
+		}
+		diff := math.Abs(b.Balance - a.Balance)
+		if amt := math.Max(b.Debit, b.Credit); amt > 0 && math.Abs(diff-amt) < 0.01 {
+			forward++
+		}
+		if amt := math.Max(a.Debit, a.Credit); amt > 0 && math.Abs(diff-amt) < 0.01 {
+			backward++
+		}
+	}
+	if forward != backward {
+		return backward > forward
+	}
+	if n := len(txs); n > 1 && !txs[0].ParsedDate.IsZero() && !txs[n-1].ParsedDate.IsZero() {
+		return txs[0].ParsedDate.After(txs[n-1].ParsedDate)
+	}
+	return false
 }
 
 // buildTableRows groups runs into rows by y, and joins runs that sit close together on a row
@@ -227,14 +485,12 @@ func buildTableRows(runs []pdf.Text) []tableRow {
 	return rows
 }
 
-// findTableHeader locates the header row and maps its cells to column kinds.
+// findTableHeader locates the header row and maps its cells to column kinds. A header names a
+// date column and the money columns: debit and credit (under any of their names), or one amount.
 func findTableHeader(rows []tableRow) (int, []tableColumn) {
 	for i, r := range rows {
-		lower := strings.ToLower(rowText(r))
-		hasDebit := strings.Contains(lower, "debit") || strings.Contains(lower, "withdrawal")
-		hasCredit := strings.Contains(lower, "credit") || strings.Contains(lower, "deposit") || strings.Contains(lower, "lodgement")
-		if !hasDebit || !hasCredit || !strings.Contains(lower, "balance") {
-			continue
+		if len(rowText(r)) > 300 {
+			continue // a paragraph, not a header
 		}
 		var cols []tableColumn
 		for _, c := range r.cells {
@@ -244,7 +500,8 @@ func findTableHeader(rows []tableRow) (int, []tableColumn) {
 				}
 			}
 		}
-		if hasKinds(cols, colTransDate, colBalance) {
+		money := hasKinds(cols, colDebit, colCredit) || hasKinds(cols, colAmount)
+		if hasKinds(cols, colTransDate) && money && len(cols) >= 3 {
 			return i, cols
 		}
 	}
@@ -288,7 +545,8 @@ func splitHeaderCell(c tableCell) []tableCell {
 func startsHeaderLabel(word string) bool {
 	w := strings.ToLower(strings.Trim(word, ".:()"))
 	for _, p := range []string{"trans", "value", "ref", "debit", "credit", "withdrawal", "deposit",
-		"lodgement", "balance", "originating", "remark", "narration", "description", "details", "posted", "posting"} {
+		"lodgement", "balance", "originating", "remark", "narration", "description", "details", "posted", "posting",
+		"money", "paid", "amount", "category", "date", "particular", "channel", "type", "beneficiary"} {
 		if strings.HasPrefix(w, p) {
 			return true
 		}
@@ -298,23 +556,43 @@ func startsHeaderLabel(word string) bool {
 
 func headerKind(label string) string {
 	l := strings.ToLower(strings.TrimSpace(label))
+	l = strings.Join(strings.Fields(strings.NewReplacer("(", " ", ")", " ", "₦", " ", ".", " ", ":", " ").Replace(l)), " ")
+	l = strings.TrimSuffix(l, " ngn")
+	has := func(words ...string) bool {
+		for _, w := range words {
+			if strings.Contains(l, w) {
+				return true
+			}
+		}
+		return false
+	}
 	switch {
-	case strings.Contains(l, "value"):
+	case l == "" || len(l) > 40:
+		return ""
+	case has("value"):
 		return colValueDate
-	case strings.Contains(l, "trans") || strings.Contains(l, "post") || l == "date" || l == "date.":
+	case has("date") || l == "time":
 		return colTransDate
-	case strings.Contains(l, "ref"):
-		return colReference
-	case strings.Contains(l, "debit") || strings.Contains(l, "withdrawal"):
-		return colDebit
-	case strings.Contains(l, "credit") || strings.Contains(l, "deposit") || strings.Contains(l, "lodgement"):
-		return colCredit
-	case strings.Contains(l, "balance"):
-		return colBalance
-	case strings.Contains(l, "branch"):
-		return colBranch
-	case strings.Contains(l, "remark") || strings.Contains(l, "narration") || strings.Contains(l, "description") || strings.Contains(l, "details"):
+	case has("to / from", "to/from", "beneficiary", "counterparty", "sender", "recipient"):
+		return colParty
+	case has("remark", "narration", "description", "detail", "particular"):
 		return colRemarks
+	case has("ref") || l == "transaction id" || l == "session id":
+		return colReference
+	case has("debit", "withdrawal", "money out", "paid out") || l == "dr":
+		return colDebit
+	case has("credit", "deposit", "lodgement", "money in", "paid in") || l == "cr":
+		return colCredit
+	case has("balance"):
+		return colBalance
+	case has("amount"):
+		return colAmount
+	case has("branch", "channel"):
+		return colBranch
+	case l == "type" || l == "transaction type" || l == "dr/cr" || l == "cr/dr":
+		return colType
+	case has("trans", "post"):
+		return colTransDate
 	}
 	return ""
 }
@@ -396,9 +674,9 @@ func hasKinds(cols []tableColumn, kinds ...string) bool {
 // works whatever line the date is aligned to (GTBank puts it on the second remarks line).
 // Returns nil when the spacing doesn't produce exactly one block per date row, so the caller
 // falls back to date-row windows.
-func remarkBlocks(body []tableRow, cols []tableColumn, dateRows []int) [][]string {
+func remarkBlocks(body []tableRow, cols []tableColumn, dateRows []int) (perRow [][]string, lead []string) {
 	if len(dateRows) < 2 {
-		return nil
+		return nil, nil
 	}
 	type line struct {
 		y    float64
@@ -421,7 +699,7 @@ func remarkBlocks(body []tableRow, cols []tableColumn, dateRows []int) [][]strin
 		}
 	}
 	if len(lines) < len(dateRows) {
-		return nil
+		return nil, nil
 	}
 
 	gaps := make([]float64, 0, len(lines)-1)
@@ -447,17 +725,25 @@ func remarkBlocks(body []tableRow, cols []tableColumn, dateRows []int) [][]strin
 	blocks = append(blocks, cur)
 	spans = append(spans, [2]float64{top, lines[len(lines)-1].y})
 
+	// One block too many, sitting wholly above the first date: the tail of the previous page's
+	// last transaction.
+	if len(blocks) == len(dateRows)+1 {
+		first := body[dateRows[0]]
+		if spans[0][1] > first.y+first.lineHeight()/2 {
+			lead, blocks, spans = blocks[0], blocks[1:], spans[1:]
+		}
+	}
 	if len(blocks) != len(dateRows) {
 		log.Printf("[PDF-DIAG] remark blocks fallback: blocks=%d dateRows=%d lines=%d baseGap=%.2f", len(blocks), len(dateRows), len(lines), base)
-		return nil
+		return nil, nil
 	}
 	// Sanity check: each date must sit inside (or right next to) its block
 	for k, ri := range dateRows {
 		y, tol := body[ri].y, body[ri].lineHeight()
 		if y > spans[k][0]+tol || y < spans[k][1]-tol {
 			log.Printf("[PDF-DIAG] remark blocks fallback: date row %d outside its block", k)
-			return nil
+			return nil, nil
 		}
 	}
-	return blocks
+	return blocks, lead
 }

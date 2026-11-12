@@ -46,7 +46,7 @@ func TestDetectReversals(t *testing.T) {
 func TestDetectSelfTransfers(t *testing.T) {
 	txs := []models.DecodedTransaction{
 		debit("Transfer to BALOGUN, OLUMIDE CHINEDU | Kuda MFB", 1050, t0), // holder, reordered
-		debit("Transfer to FAVOUR IFEOLUWA BALOGUN | OPay", 5000, t0),      // sibling: shared surname only
+		debit("Transfer to SEUN ADUNNI BALOGUN | OPay", 5000, t0),          // sibling: shared surname only
 		credit("Add Money-Bank Card | Guaranty Trust Bank", 2000, t0),      // own card top-up
 		{RawDescription: "Auto-save to OWealth", Amount: -8390, Debit: 8390, Flags: models.TransactionFlags{IsSavings: true, IsMidnightLeak: true}},
 	}
@@ -200,7 +200,7 @@ func TestGTBankTransferToOwnOPayIsSelfTransfer(t *testing.T) {
 	txs := []models.DecodedTransaction{
 		debit("000013260808192154000007310610 NIP TRANSFER TO OPAY - CHINEDU OLUMIDE BALOGUN", 102000, t0),
 		credit("TRANSFER BETWEEN CUSTOMERS 1000042608-TRANSFER FROM CHINEDU OLUMIDE BALOGUN-OPAY-CHINEDU", 30000, t0),
-		debit("NIP TRANSFER TO OPAY - FAVOUR IFEOLUWA BALOGUN", 5000, t0), // sibling
+		debit("NIP TRANSFER TO OPAY - SEUN ADUNNI BALOGUN", 5000, t0), // sibling
 	}
 	// GTBank filename order: surname first
 	DetectSelfTransfers(txs, "BALOGUN CHINEDU OLUMIDE")
@@ -243,9 +243,9 @@ func p2p(name, bank string, amt float64, at time.Time, isCredit bool) models.Dec
 func TestScorePeople(t *testing.T) {
 	txs := []models.DecodedTransaction{
 		// Sibling: shares surname, round amounts, sends money back -> family
-		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 5000, t0, false),
-		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 2000, t0.AddDate(0, 0, 9), false),
-		p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 1000, t0.AddDate(0, 0, 12), true),
+		p2p("SEUN ADUNNI BALOGUN", "OPay", 5000, t0, false),
+		p2p("SEUN ADUNNI BALOGUN", "OPay", 2000, t0.AddDate(0, 0, 9), false),
+		p2p("SEUN ADUNNI BALOGUN", "OPay", 1000, t0.AddDate(0, 0, 12), true),
 		// Trader on OPay (not Moniepoint): odd amounts, one-way -> vendor
 		p2p("NGOZI AMAKA OBI", "OPay", 1050, t0, false),
 		p2p("NGOZI AMAKA OBI", "OPay", 3810, t0.AddDate(0, 0, 4), false),
@@ -273,11 +273,11 @@ func TestScorePeople(t *testing.T) {
 }
 
 func TestPaymentLabelOverridesPerson(t *testing.T) {
-	tx := p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 4500, t0, false)
+	tx := p2p("SEUN ADUNNI BALOGUN", "OPay", 4500, t0, false)
 	tx.Date = "03-Aug-2026"
 	txs := []models.DecodedTransaction{tx}
-	ApplyContactLabels(txs, nil, []string{"Favour Balogun"}, "Market & Small Vendors")
-	ApplyPaymentLabels(txs, []string{"03-Aug-2026|4500|Favour Balogun|purchase"}, "Market & Small Vendors")
+	ApplyContactLabels(txs, nil, []string{"Seun Balogun"}, "Market & Small Vendors")
+	ApplyPaymentLabels(txs, []string{"03-Aug-2026|4500|Seun Balogun|purchase"}, "Market & Small Vendors")
 	if txs[0].Category != "Market & Small Vendors" || txs[0].DecisionBasis != "payment_label" {
 		t.Errorf("per-payment label must beat the person label: %q / %q", txs[0].Category, txs[0].DecisionBasis)
 	}
@@ -297,13 +297,13 @@ func TestTotalLeakBurnCountsEachTransactionOnce(t *testing.T) {
 }
 
 func TestSelfTransferNameVariants(t *testing.T) {
-	holder := nameTokens("JOSEPH ADEDEJI ADEWUNMI")
-	for _, name := range []string{"MR JOSEPH ADEWUNMI", "JOSEPHADEDEJI ADEWUNMI", "ADEWUNMI, ADEDEJI JOSEPH"} {
+	holder := nameTokens("TUNDE OLUMIDE BAKARE")
+	for _, name := range []string{"MR TUNDE BAKARE", "TUNDEOLUMIDE BAKARE", "BAKARE, OLUMIDE TUNDE"} {
 		if !isSameName(holder, name) {
 			t.Errorf("%q should be the holder", name)
 		}
 	}
-	for _, name := range []string{"EUNICE IFEOLUWA ADEWUNMI", "MR ADEWUNMI"} {
+	for _, name := range []string{"KEMI ADUNNI BAKARE", "MR BAKARE"} {
 		if isSameName(holder, name) {
 			t.Errorf("%q is a relative, not the holder", name)
 		}
@@ -313,10 +313,10 @@ func TestSelfTransferNameVariants(t *testing.T) {
 func TestMerchantCollectionAccountIsNotSelfTransfer(t *testing.T) {
 	now := time.Now()
 	txs := []models.DecodedTransaction{
-		debit("Transfer to SHUTTLERSMETR/JOSEPH ADEWUNMI | Wema Bank | 8000****11", 1500, now),
-		debit("NIP TRANSFER TO OPAY - JOSEPH ADEDEJI ADEWUNMI", 5000, now),
+		debit("Transfer to SHUTTLERSMETR/TUNDE BAKARE | Wema Bank | 8000****11", 1500, now),
+		debit("NIP TRANSFER TO OPAY - TUNDE OLUMIDE BAKARE", 5000, now),
 	}
-	DetectSelfTransfers(txs, "JOSEPH ADEDEJI ADEWUNMI")
+	DetectSelfTransfers(txs, "TUNDE OLUMIDE BAKARE")
 	if txs[0].Flags.IsSelfTransfer {
 		t.Error("payment to Shuttlers' account in the holder's name is not a self transfer")
 	}
@@ -358,7 +358,7 @@ func TestUnsurePersonIsNotUrgent2kLeak(t *testing.T) {
 		tx.Flags.IsUrgent2k = true
 		txs = append(txs, tx)
 	}
-	review := ScorePeople(txs, "JOSEPH ADEDEJI ADEWUNMI")
+	review := ScorePeople(txs, "TUNDE OLUMIDE BAKARE")
 	if len(review) != 1 || review[0].Guess != "unsure" {
 		t.Fatalf("expected one unsure review, got %+v", review)
 	}
@@ -374,7 +374,7 @@ func TestMarkUncategorized(t *testing.T) {
 	unknownPerson.Flags.IsUrgent2k = true
 	unknownMemo := debit("GTW", 3.75, t0)
 	unknownMemo.Category, unknownMemo.Confidence = "Personal Discretionary", 0.7
-	decided := p2p("FAVOUR IFEOLUWA BALOGUN", "OPay", 5000, t0, false)
+	decided := p2p("SEUN ADUNNI BALOGUN", "OPay", 5000, t0, false)
 	decided.DecisionBasis = "person"
 	txs := []models.DecodedTransaction{unknownPerson, unknownMemo, decided}
 

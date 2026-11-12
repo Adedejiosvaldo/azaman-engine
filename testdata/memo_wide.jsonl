@@ -1,0 +1,403 @@
+{"memo": "POS/WEB PURCHASE TRANSACTION -785922- PEP STORES LA LANG", "amount": 12000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT MANO 3980453547", "amount": 7500, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase CONOIL STATION 10536232", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*UNILAG SCHOOL FEES LAGOS NG", "amount": 12000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "FLW*BETWAY LAGOS NG", "amount": 2500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *PALMCREDIT", "amount": 12000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/6755702338/KOLA ADEWALE/shoes and bag", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS Purchase SUPER SAVERS HOME 07152659", "amount": 12000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "Stamp Duty", "amount": 25000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "PSTK/NIIT/310835512", "amount": 2500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "FLW*WAKANOW LAGOS NG", "amount": 12000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*BETKING LAGOS NG", "amount": 500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 69209249251 SAMSUNG EXPERIENCE STORE LAGOS NG", "amount": 500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *RENDER.COM", "amount": 25000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT DIGITALOCEAN.COM 8911932188", "amount": 60000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 83155056963 CUBANA LOUNGE LAGOS NG", "amount": 25000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/6474885636/MUSA IBRAHIM/cooperative dues", "amount": 2500, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *PARIPESA", "amount": 1200, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to UCHE OKORO | UBA | 8739400574 | uber to airport", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS Purchase KARA.COM.NG 62940833", "amount": 500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "FLW*GUO TRANSPORT LAGOS NG", "amount": 2500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "PREPAID METER TOKEN 57704741450", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "CARD PURCHASE OANDO SERVICE STATION NG 253815", "amount": 2500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -146053- JIJI.NG LA LANG", "amount": 1200, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/BEDC/747432842", "amount": 12000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *AEDC", "amount": 7500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "FLW*COWRYWISE LAGOS NG", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/upkeep for mummy/FRM TUNDE BAKARE TO RUTH AKPAN", "amount": 7500, "hour": null, "want": "Family & Favors", "alt": ["Black Tax (Family Support)"], "kind": "purpose", "split": "test"}
+{"memo": "Card Payment | JED", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "ACCOUNT MAINTENANCE CHARGE", "amount": 60000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "test"}
+{"memo": "TRF/Transfer/FRM TUNDE BAKARE TO ANGLICAN COMMUNION", "amount": 7500, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *FUNTASTICLAND", "amount": 500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "TV | GOtv | 8448793794", "amount": 4000, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *JAMB", "amount": 2500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -382577- KFC ADMIRALTY LA LANG", "amount": 60000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/1119749949/DAYSTAR CHRISTIAN CENTRE", "amount": 25000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "test"}
+{"memo": "VAT ON COMMISSION", "amount": 60000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "TRF/house rent 2026/FRM TUNDE BAKARE TO SEUN OKAFOR", "amount": 7500, "hour": null, "want": "Rent & Housing", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "ATM WITHDRAWAL FEE OTHER BANK", "amount": 2500, "hour": null, "want": "Bank Fees & Charges", "alt": ["POS Cashout & Agency"], "kind": "system", "split": "dev"}
+{"memo": "Card Payment | IBOM AIR", "amount": 4000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 28904041099 CLINA LANCET LABORATORIES LAGOS NG", "amount": 25000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE ALPHA PHARMACY NG 088683", "amount": 2500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 91979726584 CASABELLA LAGOS NG", "amount": 60000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/5286970684/CHRIST EMBASSY", "amount": 4000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "test"}
+{"memo": "POS DEBIT: 53557211793 SOOYAH BISTRO LAGOS NG", "amount": 25000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *BETWINNER", "amount": 12000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 73083780992 ORIKI SPA LAGOS NG", "amount": 4000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase RAINOIL LTD 87029670", "amount": 12000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT UDEMY 7417341405", "amount": 2500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to NKEM OBIORA | First Bank | 0581702020 | phone screen repair", "amount": 25000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "purpose", "split": "test"}
+{"memo": "TRF/dental checkup/FRM TUNDE BAKARE TO EMEKA UDEH", "amount": 500, "hour": null, "want": "Health & Medical", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Charge reversal correction", "amount": 4000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "Card Payment | YELLOW CARD", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | AIR PEACE", "amount": 2500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *CHAKA", "amount": 500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to YEMI OLADELE | GTBank | 9559994260 | fuel", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "WEB PMT NOTION LABS 5927651734", "amount": 25000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "Debit adjustment", "amount": 12000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "CARD PURCHASE ALIEXPRESS NG 115734", "amount": 7500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase MR PRICE 33657140", "amount": 1200, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "CARD PURCHASE EVERCARE HOSPITAL NG 787019", "amount": 2500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | CREDIT DIRECT", "amount": 60000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/CLOUDFLARE/465614911", "amount": 4000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/4885881796/JOY NWACHUKWU/birthday gift", "amount": 60000, "hour": null, "want": "Family & Favors", "alt": ["Personal Discretionary"], "kind": "purpose", "split": "test"}
+{"memo": "Card Payment | DSTV", "amount": 500, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *CARBON LOAN REPAYMENT", "amount": 60000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/7577563038/CHUKS LOGISTICS SERVICES", "amount": 7500, "hour": null, "want": "Commute & Transit", "alt": ["Commercial & Business"], "kind": "business", "split": "dev"}
+{"memo": "AIRTIME PURCHASE 09026497975 MTN VTU", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "NIP/DR/2170815053/TRANSFER", "amount": 7500, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *GOOGLE CLOUD", "amount": 7500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "Kuda Save pocket top up", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "POS DEBIT: 47039573016 AMAZON.COM LAGOS NG", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "CARD PURCHASE POINTEK NG 926583", "amount": 60000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/laundry/FRM TUNDE BAKARE TO IFE ADEBAYO", "amount": 1200, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "purpose", "split": "test"}
+{"memo": "NIP/DR/9326470406/ADEX GLOBAL VENTURES", "amount": 4000, "hour": null, "want": "Commercial & Business", "alt": ["Market & Small Vendors"], "kind": "business", "split": "dev"}
+{"memo": "WEB PMT VERCEL INC 2817218229", "amount": 1200, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | STEAM GAMES", "amount": 2500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -223694- ENYO RETAIL LA LANG", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "CARD PURCHASE BURGER KING VI NG 549026", "amount": 4000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/720250711095/REF", "amount": 12000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "Card Payment | PIGGYVEST", "amount": 500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*MICROSOFT 365 LAGOS NG", "amount": 4000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *ADOBE CREATIVE CLOUD", "amount": 7500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase SHEIN 21898996", "amount": 12000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | LAGRIDE", "amount": 12000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *LIRS", "amount": 4000, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *STANBIC IBTC ASSET MGT", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase ZARON COSMETICS 57587169", "amount": 12000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/INTERSWITCH BILLS/165099736", "amount": 2500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "dev"}
+{"memo": "REF:7711083525628371", "amount": 4000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "PSTK/BUSHA/924679120", "amount": 7500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *TROVE FINANCE", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/QUIDAX/074090350", "amount": 25000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/LANDMARK BEACH/062537809", "amount": 2500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/5171879363/ELEVATION CHURCH", "amount": 500, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "POS Purchase KONGA.COM 11805763", "amount": 25000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to NASFAT | Kuda MFB | 8125272524", "amount": 4000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "WEB PMT SPORTYBET 3811837306", "amount": 12000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/5478047790/SMOOTH CUTS BARBERSHOP", "amount": 25000, "hour": null, "want": "Personal Care", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "TRF/barbing/FRM TUNDE BAKARE TO KUNLE OJO", "amount": 2500, "hour": null, "want": "Personal Care", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "CARD PURCHASE REDDINGTON HOSPITAL NG 327159", "amount": 25000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/SILVERBIRD CINEMAS/675435845", "amount": 60000, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to ANSAR UD DEEN", "amount": 500, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to SUNSHINE HOTEL AND SUITES | First Bank | 3440821666", "amount": 500, "hour": null, "want": "Personal Discretionary", "alt": [], "kind": "business", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -217421- CHICKEN REPUBLIC IKEJA LA LANG", "amount": 500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | AIRTEL NETWORKS", "amount": 1200, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to HOUSE ON THE ROCK | Zenith Bank | 9551513954", "amount": 500, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Card Payment | STARTIMES", "amount": 500, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | EKO ELECTRICITY", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 31627925060 TEMU.COM LAGOS NG", "amount": 1200, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase ROYAL TOUCH UNISEX SALON 78368301", "amount": 7500, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/0256365503/HALIMA SANI/foodstuff for the month", "amount": 1200, "hour": null, "want": "Food & Dining", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "WEB PMT GREEN AFRICA AIRWAYS 0567530279", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "QR Payment", "amount": 2500, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "FLW*ILOTBET LAGOS NG", "amount": 4000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase HOUSE OF TARA 02145892", "amount": 2500, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT IMMIGRATION PASSPORT 4971242789", "amount": 60000, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT IKEDC 0801710571", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | BOLT.EU/R/2609", "amount": 2500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT GENESIS CINEMAS 5400631688", "amount": 60000, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "CARD MAINTENANCE FEE", "amount": 12000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "WEB PMT TIX AFRICA 7141919978", "amount": 7500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *AMAZON WEB SERVICES", "amount": 500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "Electronic Money Transfer Levy", "amount": 12000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "test"}
+{"memo": "PSTK/UNITED NIGERIA AIRLINES/971826432", "amount": 60000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *KEDCO", "amount": 60000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *APPLE.COM/BILL", "amount": 7500, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to LAGOS STATE WATER CORPORATION", "amount": 7500, "hour": null, "want": "Rent & Housing", "alt": ["Airtime & Utilities", "Bills & Online Payments"], "kind": "business", "split": "test"}
+{"memo": "CARD PURCHASE BODYLINE FITNESS NG 621124", "amount": 12000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *ANTHROPIC CLAUDE", "amount": 25000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to COZA", "amount": 7500, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to EMMANUEL AUTO MECHANIC WORKS | GTBank | 5130208903", "amount": 2500, "hour": null, "want": "Commute & Transit", "alt": ["Market & Small Vendors", "Commercial & Business"], "kind": "business", "split": "test"}
+{"memo": "PSTK/UBER *TRIP/383903123", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "Cash Withdrawal | POS | 8853148919", "amount": 4000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "system", "split": "test"}
+{"memo": "ATM WDL 61945484 ALLEN AVENUE LAGOS", "amount": 60000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "PSTK/22BET/529996689", "amount": 7500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT WAEC 5181089527", "amount": 7500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to ESTHER DANJUMA | OPay | 4404023359 | dstv subscription", "amount": 12000, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "NIP/DR/3886191155/LARA COKER/loan repayment", "amount": 7500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Card Payment | SPECTRANET", "amount": 7500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT CANVA PTY 4060229891", "amount": 12000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "AIRTIME/GLO/08133468856", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "POS Purchase FOODCO 58562632", "amount": 500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to BISI OLATUNJI - shawarma and drinks", "amount": 500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "purpose", "split": "test"}
+{"memo": "POS Purchase BLENCO SUPERMARKET 01913476", "amount": 7500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE NETT PHARMACY NG 375571", "amount": 25000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -356501- ISTORE NG LA LANG", "amount": 4000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE MR BIGGS NG 837832", "amount": 25000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -955185- MARKET SQUARE LA LANG", "amount": 1200, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase JUSTRITE SUPERSTORE 23045539", "amount": 4000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase FAMILY CARE CLINIC 61309405", "amount": 1200, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to IYA IBEJI AMALA SPOT", "amount": 4000, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Electricity | IKEDC | 92672450910", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Transfer to KEMI ADEYEMI - school fees second term", "amount": 25000, "hour": null, "want": "Education", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "TRF/lunch/FRM TUNDE BAKARE TO TUNDE AJIBOLA", "amount": 2500, "hour": null, "want": "Food & Dining", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *SPOTIFY AB", "amount": 12000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "FLW*RENMONEY LAGOS NG", "amount": 4000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*LASG REVENUE LAGOS NG", "amount": 7500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "CARD PURCHASE MEGA CHICKEN NG 880491", "amount": 500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/light token/FRM TUNDE BAKARE TO PETER OBASI", "amount": 25000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "CARD PURCHASE DEBONAIRS PIZZA NG 581075", "amount": 7500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*IKEJA ELECTRIC LAGOS NG", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | AUDIOMACK", "amount": 1200, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*BOOMPLAY LAGOS NG", "amount": 25000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "TV | DSTV | 3515952139", "amount": 1200, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Transfer to BOLA ADENIYI - ajo contribution week 4", "amount": 7500, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to DIVINE FAVOUR HAIR PALACE | First Bank | 1718725729", "amount": 60000, "hour": null, "want": "Personal Care", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "POS Purchase DENTAL CLINIC IKEJA 98341708", "amount": 60000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/BUYPOWER.NG/338047486", "amount": 1200, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/DISNEY PLUS/937156549", "amount": 7500, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT LCC TOLL LEKKI 8009948469", "amount": 2500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -141776- MRS OIL LA LANG", "amount": 7500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to JOHN OKEKE - data subscription", "amount": 1200, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -096080- SPAR NIGERIA LA LANG", "amount": 60000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/4762162073/COMPUTER VILLAGE GADGET HUB", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "PSTK/OKASH/686134399", "amount": 25000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/1495658578/ROSE IKENNA/cinema tickets", "amount": 4000, "hour": null, "want": "Personal Discretionary", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS Purchase TOTALENERGIES IKOYI 04693703", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *GITHUB INC", "amount": 25000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | ZOOM.US", "amount": 2500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "Spend & Save Deposit", "amount": 60000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "WEB PMT EKEDC PREPAID 3027685185", "amount": 60000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Third-Party Merchant Order | JUMIA | 899681406021", "amount": 25000, "hour": null, "want": "Shopping & Retail", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "POS DEBIT: 75793834701 KILIMANJARO RESTAURANT LAGOS NG", "amount": 4000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "TRF/Transfer/FRM TUNDE BAKARE TO DE CHOICE FAST FOOD", "amount": 60000, "hour": null, "want": "Food & Dining", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "PSTK/ULESSON/188104788", "amount": 25000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "FLW*NEWCREDIT LAGOS NG", "amount": 500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE 3CHUB NG 526310", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "SafeBox Deposit", "amount": 500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "POS Purchase HYGEIA HMO 97792487", "amount": 7500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT DUOLINGO 9327577996", "amount": 500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase ZARA 50705976", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "USSD Charge", "amount": 2500, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Transfer to ROYAL PRINTING PRESS | Zenith Bank | 5351744524", "amount": 25000, "hour": null, "want": "Commercial & Business", "alt": ["Market & Small Vendors"], "kind": "business", "split": "test"}
+{"memo": "WEB PMT FOOTBALL.COM 6660947736", "amount": 25000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "NIP TRANSFER COMMISSION", "amount": 12000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "test"}
+{"memo": "Transfer to BRIGHT FUTURE TUTORIAL CENTRE", "amount": 12000, "hour": null, "want": "Education", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "WEB PMT JETBRAINS 9135452012", "amount": 1200, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/3143158263/VICTORY GAS PLANT", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": ["Commute & Transit", "Market & Small Vendors"], "kind": "business", "split": "dev"}
+{"memo": "POS DEBIT: 59779309376 BALOGUN MARKET FABRICS LAGOS NG", "amount": 12000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *GIGM.COM", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to GLORY LAND NURSERY AND PRIMARY SCHOOL | OPay | 9543373060", "amount": 4000, "hour": null, "want": "Education", "alt": [], "kind": "business", "split": "test"}
+{"memo": "POS WITHDRAWAL 23458814 AGENT", "amount": 60000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *RIDA NG", "amount": 500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "FLW*COVENANT UNIVERSITY LAGOS NG", "amount": 500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Betting | Bet9ja | 01209384", "amount": 25000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "system", "split": "test"}
+{"memo": "POS DEBIT: 79723985546 MECURE HEALTHCARE LAGOS NG", "amount": 12000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | Chowdeck", "amount": 1200, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *LIVESCORE BET", "amount": 7500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "MTN VTU 09026096415 USSD", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "Fixed Deposit Placement", "amount": 2500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Transfer to PAUL OGBONNA - feeding allowance", "amount": 12000, "hour": null, "want": "Family & Favors", "alt": ["Food & Dining"], "kind": "purpose", "split": "test"}
+{"memo": "Transfer to ZAINAB YUSUF | OPay | 6459651220 | aso ebi", "amount": 12000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "purpose", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *LAPO MICROFINANCE LOAN", "amount": 60000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/REMITA/064683714", "amount": 500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 93984350846 RUFF N TUMBLE LAGOS NG", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "FLW*ABC TRANSPORT LAGOS NG", "amount": 4000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/2351680423/VICTOR UGWU/betting", "amount": 7500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "FLW*NAMECHEAP.COM LAGOS NG", "amount": 25000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT FIRS TAX PAYMENT 0851526889", "amount": 2500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to ZENITH GENERAL INSURANCE | First Bank | 3190024857", "amount": 2500, "hour": null, "want": "Bills & Online Payments", "alt": ["Commercial & Business"], "kind": "business", "split": "dev"}
+{"memo": "POS DEBIT: 19848151415 THE HOUSE BAR LAGOS NG", "amount": 25000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 99436230351 RELIANCE HMO LAGOS NG", "amount": 25000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/estate service charge/FRM TUNDE BAKARE TO ISAAC OLAWALE", "amount": 4000, "hour": null, "want": "Rent & Housing", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "POS Purchase GARMENT CARE DRY CLEANERS 74676297", "amount": 500, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 86066892838 EBEANO SUPERMARKET LAGOS NG", "amount": 7500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | COWRY CARD TOPUP", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | SLACK TECHNOLOGIES", "amount": 2500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "FLW*Glovo LAGOS NG", "amount": 7500, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -075736- W BAR LOUNGE LA LANG", "amount": 2500, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT AELLA CREDIT 3607903619", "amount": 500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT TICKETMASTER 6613416367", "amount": 1200, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/6442151668/FIRST CLASS OPTICALS", "amount": 4000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "business", "split": "dev"}
+{"memo": "Card Payment | YOUTUBE PREMIUM", "amount": 60000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | GOOGLE *YouTube", "amount": 25000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*MSPORT LAGOS NG", "amount": 500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -269734- WASHMAN LAUNDRY LA LANG", "amount": 25000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*NIMC NIN LAGOS NG", "amount": 500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to CHIDI NWOSU | OPay | 9360660071 | caution fee and agency", "amount": 500, "hour": null, "want": "Rent & Housing", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "Card Payment | QUICKTELLER", "amount": 2500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT MERISTEM 1027448751", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "VAT on Transfer Fee", "amount": 12000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "test"}
+{"memo": "Airtime | 08138090797 | GLO", "amount": 1200, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Transfer to CATHOLIC ARCHDIOCESE | GTBank | 0864891789", "amount": 12000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "test"}
+{"memo": "Transfer to GOOD SHEPHERD MEDICAL CENTRE", "amount": 7500, "hour": null, "want": "Health & Medical", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Third-Party Merchant Order | BOLT | 587060901098", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": ["Shopping & Retail"], "kind": "system", "split": "test"}
+{"memo": "FLW*TIZETI WIFI LAGOS NG", "amount": 12000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 70970513253 SHISHA ROOM LAGOS NG", "amount": 60000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -567685- HUBMART STORES LA LANG", "amount": 1200, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*HEROKU LAGOS NG", "amount": 60000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase AVON HMO 67110599", "amount": 1200, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "Auto-save to OWealth Balance", "amount": 1200, "hour": null, "want": "FinTech & Investments", "alt": ["Internal Transfers"], "kind": "system", "split": "test"}
+{"memo": "PSTK/BOOKING.COM/974579439", "amount": 7500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *QUICKCHECK", "amount": 60000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "MISC DEBIT", "amount": 60000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "dev"}
+{"memo": "Card Payment | CHAPEL HILL DENHAM", "amount": 25000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 69748212378 THE PLACE LEKKI LAGOS NG", "amount": 12000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/3953483001/FUNKE AKINDELE/wedding contribution", "amount": 1200, "hour": null, "want": "Family & Favors", "alt": ["Personal Discretionary"], "kind": "purpose", "split": "test"}
+{"memo": "TRF/website hosting renewal/FRM TUNDE BAKARE TO TAIWO OGUNLEYE", "amount": 2500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "FLW*LCREDIT LAGOS NG", "amount": 4000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *BRANCH INTERNATIONAL", "amount": 1200, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/hospital bill/FRM TUNDE BAKARE TO FEMI ALABI", "amount": 1200, "hour": null, "want": "Health & Medical", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "*737*8098# AIRTIME TOPUP", "amount": 12000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "FLW*SHOWMAX LAGOS NG", "amount": 1200, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "OVERDRAFT INTEREST CHARGE", "amount": 25000, "hour": null, "want": "Loans & Debt Service", "alt": ["Bank Fees & Charges"], "kind": "system", "split": "dev"}
+{"memo": "Card Payment | FAIRMONEY", "amount": 25000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "CARD PURCHASE MAMA CASS NG 112835", "amount": 60000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to ADA NNAMDI | MONIE POINT | 2989079648 | waste bill lawma", "amount": 7500, "hour": null, "want": "Rent & Housing", "alt": ["Airtime & Utilities"], "kind": "purpose", "split": "test"}
+{"memo": "WEB PMT INVESTNOW 2195155689", "amount": 500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/2955028147/GRACE EZE/offering and first fruit", "amount": 25000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "CARDLESS WITHDRAWAL PAYCODE", "amount": 4000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Transfer to LIVING FAITH CHURCH | GTBank | 9728364903", "amount": 60000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *BAMBOO INVEST", "amount": 7500, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT BYBIT 2102590913", "amount": 1200, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "FLW*SMILE COMMUNICATIONS LAGOS NG", "amount": 25000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Third-Party Merchant Order | SPORTYBET | 521629360833", "amount": 7500, "hour": null, "want": "Betting & Gaming", "alt": ["Shopping & Retail"], "kind": "system", "split": "test"}
+{"memo": "Transfer to BLESSED HANDS PHARMACY | Access Bank | 6179202024", "amount": 7500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "business", "split": "dev"}
+{"memo": "POS Purchase MEDPLUS PHARMACY 64431302", "amount": 12000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | EKO HOTELS", "amount": 1200, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -662326- BHEERHUGZ CAFE LA LANG", "amount": 500, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *IPNX", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase CLUB 57 03631730", "amount": 7500, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase NIPCO GAS 36962963", "amount": 60000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to EMEKA BUILDING MATERIALS | First Bank | 9018441324", "amount": 4000, "hour": null, "want": "Shopping & Retail", "alt": ["Commercial & Business", "Market & Small Vendors", "Rent & Housing"], "kind": "business", "split": "test"}
+{"memo": "FLW*TRAVELSTART LAGOS NG", "amount": 4000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/OMU RESORT/722500346", "amount": 2500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *NETLIFY", "amount": 1200, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT CORONA SCHOOLS 4416699286", "amount": 12000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "FLW*KREDIBANK LAGOS NG", "amount": 25000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/WHOGOHOST/856315055", "amount": 4000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *LUNO", "amount": 1200, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *Jumia Food", "amount": 4000, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | ARM INVESTMENT", "amount": 25000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Betting | SportyBet | 05444229", "amount": 1200, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "system", "split": "test"}
+{"memo": "Card Payment | FIBERONE", "amount": 7500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE ARDOVA PLC AP NG 594427", "amount": 12000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT AIICO INSURANCE 1897992884", "amount": 60000, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE FOUANI NIGERIA NG 432310", "amount": 12000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/BRITISH COUNCIL IELTS/751732604", "amount": 4000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "NIP/DR/5223726169/ALHAJA KUDI FOODSTUFF STORE", "amount": 2500, "hour": null, "want": "Food & Dining", "alt": ["Market & Small Vendors"], "kind": "business", "split": "test"}
+{"memo": "TRF/gym membership/FRM TUNDE BAKARE TO MERCY ATANDA", "amount": 4000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "purpose", "split": "dev"}
+{"memo": "OKASH AUTO REPAYMENT", "amount": 2500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "system", "split": "test"}
+{"memo": "Transfer to DAVID ETIM - pocket money", "amount": 4000, "hour": null, "want": "Family & Favors", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -127296- JUMIA LA LANG", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/2124423754/OBINNA EZEH/mechanic workmanship", "amount": 60000, "hour": null, "want": "Commute & Transit", "alt": ["Market & Small Vendors", "Personal Discretionary"], "kind": "purpose", "split": "dev"}
+{"memo": "CARD PURCHASE ITEM 7 GO NG 502551", "amount": 1200, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | AIRBNB", "amount": 60000, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -453173- BOVAS PETROLEUM LA LANG", "amount": 4000, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 67828845762 MOBIL FILLING STATION LAGOS NG", "amount": 7500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | LEADWAY ASSURANCE", "amount": 7500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/NETFLIX.COM/995768911", "amount": 25000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | BAXI", "amount": 4000, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT PEACE MASS TRANSIT 0407545727", "amount": 4000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | HEYFOOD", "amount": 12000, "hour": null, "want": "Late Night Food & Lounges", "alt": ["Food & Dining"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/8038925471/SAMUEL ADEKUNLE/netflix", "amount": 2500, "hour": null, "want": "Subscriptions & TV", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -772738- NNPC MEGA STATION LA LANG", "amount": 7500, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/EEDC/611796748", "amount": 12000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to TOPMOST ENTERPRISES NIG LTD | PalmPay | 4059588092", "amount": 12000, "hour": null, "want": "Commercial & Business", "alt": ["Market & Small Vendors"], "kind": "business", "split": "test"}
+{"memo": "WEB PMT SPECTA 7887904560", "amount": 12000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | STARLINK", "amount": 60000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -026605- CAFE ONE LA LANG", "amount": 4000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT RISEVEST 2881243320", "amount": 12000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT GREENSPRINGS SCHOOL 4587718069", "amount": 500, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Card Payment | FIGMA INC", "amount": 60000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT 9MOBILE 6328971704", "amount": 500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *MERRYBET", "amount": 12000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT AMAZON PRIME VIDEO 0977113853", "amount": 2500, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*COURSERA LAGOS NG", "amount": 25000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *CAC REGISTRATION", "amount": 7500, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase NORTHWEST PETROLEUM 37902028", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Card Payment | XCREDIT", "amount": 12000, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*GOTV LAGOS NG", "amount": 4000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/GOOGLE ONE/664519181", "amount": 4000, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT GLO MOBILE 9921713164", "amount": 1200, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "TRF/Transfer/FRM TUNDE BAKARE TO RCCG", "amount": 500, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "PSTK/AXA MANSARD/532967751", "amount": 12000, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "test"}
+{"memo": "Target Savings Auto Debit", "amount": 1200, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "Airtime | 08134818454 | Airtel", "amount": 4000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "NIP/DR/7222208693/DAYO SALAMI/transport fare", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -288779- SHOPRITE IKEJA LA LANG", "amount": 7500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to MFM MINISTRIES", "amount": 12000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "CARD PURCHASE SWEET SENSATION NG 110843", "amount": 7500, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "CARD PURCHASE GLAM NAILS STUDIO NG 450720", "amount": 1200, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/GODADDY/573623234", "amount": 60000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT BET9JA 3523949894", "amount": 500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PMT 37330215451432", "amount": 2500, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "WEB PMT ARIK AIR 9219637843", "amount": 500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/PLAYSTATION NETWORK/969615737", "amount": 25000, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase HEALTHPLUS LTD 34287138", "amount": 500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -917824- ST NICHOLAS HOSPITAL LA LANG", "amount": 500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT ICLOUD STORAGE 1505095027", "amount": 500, "hour": null, "want": "Subscriptions & TV", "alt": ["Tech & Cloud Infrastructure"], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 04320171851 PIZZA HUT LAGOS NG", "amount": 25000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "POS Purchase ART CAFE 79496582", "amount": 12000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/Transfer/FRM TUNDE BAKARE TO PRIME DIAGNOSTICS LABORATORY", "amount": 2500, "hour": null, "want": "Health & Medical", "alt": [], "kind": "business", "split": "test"}
+{"memo": "WEB PMT NECO 8953992237", "amount": 1200, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "CARD PURCHASE MINISO NG 661961", "amount": 4000, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT OPENAI *CHATGPT 4505224407", "amount": 500, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "Loan Repayment | 3179861689", "amount": 2500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "system", "split": "test"}
+{"memo": "Card Payment | INDRIVE", "amount": 500, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "Payment", "amount": 25000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "Transfer to AMINA BELLO - tithe", "amount": 12000, "hour": null, "want": "Religious Giving", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "POS Purchase EYE FOUNDATION HOSPITAL 90375472", "amount": 7500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *MTN NIGERIA", "amount": 4000, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase KUTS BARBING 63507482", "amount": 25000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/FRSC DRIVERS LICENCE/755152252", "amount": 25000, "hour": null, "want": "Bills & Online Payments", "alt": ["Uncategorized"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to TOLU AJAYI - drugs and malaria test", "amount": 60000, "hour": null, "want": "Health & Medical", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "WEB PMT BINANCE 2367369625", "amount": 25000, "hour": null, "want": "FinTech & Investments", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Mobile Data | 08133453735 | MTN", "amount": 7500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "PSTK/EASEMONI/065641963", "amount": 7500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase I-FITNESS GYM 19570573", "amount": 60000, "hour": null, "want": "Personal Care", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 16630494032 TANTALIZERS LAGOS NG", "amount": 12000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "dev"}
+{"memo": "POS DEBIT: 13079005078 NIKE STORE LAGOS NG", "amount": 500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/6683805751/SADE BALOGUN/hair and nails", "amount": 500, "hour": null, "want": "Personal Care", "alt": [], "kind": "purpose", "split": "dev"}
+{"memo": "PSTK/CURSOR AI/247606637", "amount": 25000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "test"}
+{"memo": "NIP/DR/2042804256/OGA TAILOR FASHION HOME", "amount": 25000, "hour": null, "want": "Shopping & Retail", "alt": ["Market & Small Vendors"], "kind": "business", "split": "dev"}
+{"memo": "Card Payment | FILMHOUSE CINEMAS", "amount": 7500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "test"}
+{"memo": "POS DEBIT: 51281812692 SLOT SYSTEMS LAGOS NG", "amount": 2500, "hour": null, "want": "Shopping & Retail", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -472678- LAGOON HOSPITALS LA LANG", "amount": 7500, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "PSTK/1XBET/061622132", "amount": 4000, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS Purchase ADDIDE SUPERMARKET 72789906", "amount": 12000, "hour": null, "want": "Food & Dining", "alt": ["Late Night Food & Lounges"], "kind": "merchant", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *PAGE FINANCIALS", "amount": 1200, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "DATA BUNDLE PURCHASE 08118841412", "amount": 7500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "system", "split": "test"}
+{"memo": "WEB PMT BETANO 0085796121", "amount": 500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -016205- SYNLAB NIGERIA LA LANG", "amount": 12000, "hour": null, "want": "Health & Medical", "alt": ["Shopping & Retail"], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to DEEPER LIFE | Zenith Bank | 4814805359", "amount": 1200, "hour": null, "want": "Religious Giving", "alt": [], "kind": "business", "split": "dev"}
+{"memo": "Transfer to JOE TYRES AND SPARE PARTS | PalmPay | 0600168443", "amount": 1200, "hour": null, "want": "Commute & Transit", "alt": ["Market & Small Vendors", "Commercial & Business", "Shopping & Retail"], "kind": "business", "split": "test"}
+{"memo": "SMS ALERT CHARGE JAN 2026", "amount": 4000, "hour": null, "want": "Bank Fees & Charges", "alt": [], "kind": "system", "split": "dev"}
+{"memo": "TRF/esusu/FRM TUNDE BAKARE TO NGOZI OBI", "amount": 7500, "hour": null, "want": "Ajo & Thrift", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *PHED", "amount": 7500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "TRF/lesson teacher/FRM TUNDE BAKARE TO SEGUN BAMIDELE", "amount": 7500, "hour": null, "want": "Education", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "Card Payment | IBEDC", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "PSTK/NAIRABET/770327079", "amount": 500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT ZEDVANCE 6092840250", "amount": 7500, "hour": null, "want": "Loans & Debt Service", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "FLW*ALTSCHOOL AFRICA LAGOS NG", "amount": 12000, "hour": null, "want": "Education", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "WEB PMT GOKADA 8866050496", "amount": 25000, "hour": null, "want": "Commute & Transit", "alt": ["Personal Discretionary"], "kind": "merchant", "split": "dev"}
+{"memo": "WEB PURCHASE: PAYSTACK *BABA IJEBU", "amount": 2500, "hour": null, "want": "Betting & Gaming", "alt": [], "kind": "merchant", "split": "test"}
+{"memo": "Transfer to BEN ONYEKA - refund of money borrowed", "amount": 25000, "hour": null, "want": "Loans & Debt Service", "alt": ["Family & Favors"], "kind": "purpose", "split": "dev"}
+{"memo": "ATM CASH WITHDRAWAL @ 40478030 GTB IKEJA", "amount": 60000, "hour": null, "want": "POS Cashout & Agency", "alt": [], "kind": "system", "split": "test"}
+{"memo": "WEB PURCHASE: PAYSTACK *HOSTINGER", "amount": 12000, "hour": null, "want": "Tech & Cloud Infrastructure", "alt": ["Subscriptions & TV"], "kind": "merchant", "split": "dev"}
+{"memo": "Transfer to MARY UMEH - nepa bill", "amount": 2500, "hour": null, "want": "Airtime & Utilities", "alt": [], "kind": "purpose", "split": "test"}
+{"memo": "POS/WEB PURCHASE TRANSACTION -475423- QUILOX NIGHT CLUB LA LANG", "amount": 25000, "hour": null, "want": "Late Night Food & Lounges", "alt": [], "kind": "merchant", "split": "dev"}
+{"memo": "Online transaction", "amount": 60000, "hour": null, "want": "Uncategorized", "alt": ["Personal Discretionary", "Bills & Online Payments"], "kind": "unknown", "split": "test"}
+{"memo": "FLW*RADISSON BLU HOTEL LAGOS NG", "amount": 500, "hour": null, "want": "Personal Discretionary", "alt": ["Shopping & Retail", "Commute & Transit"], "kind": "merchant", "split": "dev"}

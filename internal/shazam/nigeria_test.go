@@ -75,7 +75,7 @@ func TestMoniepointRecipientIsVendorNotFamily(t *testing.T) {
 	}
 
 	fam := MatchAndDecode(models.RawTransaction{
-		Description: "Transfer to FAVOUR IFEOLUWA BALOGUN | OPay | 4906137089",
+		Description: "Transfer to SEUN ADUNNI BALOGUN | OPay | 4906137089",
 		Debit:       5000,
 	})
 	if fam.Category != "Family & Favors" || !fam.Flags.IsUrgent2k {
@@ -129,11 +129,11 @@ func TestSplitMemo(t *testing.T) {
 
 func TestPurposeDecidesThePayment(t *testing.T) {
 	// Any item the sender typed is a purchase guess; support words stay family
-	buy := MatchAndDecode(models.RawTransaction{Description: "Transfer to FAVOUR IFEOLUWA BALOGUN | OPay | 4906137089 | cow leg", Debit: 4500})
+	buy := MatchAndDecode(models.RawTransaction{Description: "Transfer to SEUN ADUNNI BALOGUN | OPay | 4906137089 | cow leg", Debit: 4500})
 	if buy.Category != VendorCategory || buy.Flags.IsUrgent2k || buy.DecisionBasis != "memo" || buy.Confidence >= 0.9 {
 		t.Errorf("typed item should be a low-confidence purchase guess: %q basis=%q conf=%v", buy.Category, buy.DecisionBasis, buy.Confidence)
 	}
-	give := MatchAndDecode(models.RawTransaction{Description: "Transfer to FAVOUR IFEOLUWA BALOGUN | OPay | 4906137089 | allowance", Debit: 4500})
+	give := MatchAndDecode(models.RawTransaction{Description: "Transfer to SEUN ADUNNI BALOGUN | OPay | 4906137089 | allowance", Debit: 4500})
 	if give.Category != "Family & Favors" {
 		t.Errorf("support word should stay family, got %q", give.Category)
 	}

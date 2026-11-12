@@ -68,7 +68,8 @@ func pageRuns(page pdf.Page) (glyphs []pdf.Text, err error) {
 		if size <= 0 {
 			size = 8
 		}
-		glyphs = append(glyphs, pdf.Text{X: m[4], Y: m[5], FontSize: size, S: text,
+		x, y := uprightPosition(m)
+		glyphs = append(glyphs, pdf.Text{X: x, Y: y, FontSize: size, S: text,
 			W: float64(len([]rune(text))) * size * 0.5}) // width estimate; only used for spacing
 		// advance roughly so consecutive Tj calls on one line don't overlap
 		tm = mul([6]float64{1, 0, 0, 1, float64(len([]rune(text))) * fontSize * 0.5, 0}, tm)
@@ -152,6 +153,26 @@ func pageRuns(page pdf.Page) (glyphs []pdf.Text, err error) {
 	})
 
 	return glyphs, nil
+}
+
+// uprightPosition returns where a text run sits as a reader sees it. Landscape statements (some
+// GTBank e-statements) draw every line rotated by 90 degrees on a portrait page, so in page
+// coordinates each table column looks like a row. Projecting the position onto the text's own
+// reading direction and up direction puts columns along x and lines along y again. Upright text
+// comes back unchanged; text at other angles (diagonal watermarks) is left where it is.
+func uprightPosition(m [6]float64) (x, y float64) {
+	a, b, c, d := m[0], m[1], m[2], m[3]
+	across, up := math.Hypot(a, b), math.Hypot(c, d)
+	if across == 0 || up == 0 {
+		return m[4], m[5]
+	}
+	a, b, c, d = a/across, b/across, c/up, d/up
+	quarterTurn := math.Abs(a) < 0.01 && math.Abs(d) < 0.01
+	upsideDown := a < -0.99 && d < -0.99
+	if !quarterTurn && !upsideDown {
+		return m[4], m[5]
+	}
+	return m[4]*a + m[5]*b, m[4]*c + m[5]*d
 }
 
 // mul multiplies two PDF affine matrices [a b c d e f] (a·b in PDF notation).

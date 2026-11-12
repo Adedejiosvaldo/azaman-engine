@@ -60,6 +60,14 @@ func DetectBank(sampleText string) string {
 		header = header[:headerWindow]
 	}
 
+	// A column set only one bank uses is the best evidence: it works when the letterhead is an
+	// image (GTBank), and a counterparty's bank named in a narration cannot imitate it.
+	for _, sig := range layoutSignatures {
+		if containsAll(lower, sig.columns) {
+			return sig.bank
+		}
+	}
+
 	// Letterhead: the bank named first wins (narrations mention other banks further down).
 	best, bestPos := "", len(header)+1
 	for _, sig := range bankSignatures {
@@ -73,19 +81,42 @@ func DetectBank(sampleText string) string {
 		return best
 	}
 
+	// Last resort: the bank named most often. Narrations name many banks, but the issuer's own name
+	// repeats in footers and product names, so it usually leads.
+	best, bestCount := "", 0
 	for _, sig := range bankSignatures {
+		count := 0
 		for _, kw := range sig.keywords {
-			if strings.Contains(lower, kw) {
-				return sig.bank
-			}
+			count += strings.Count(lower, kw)
+		}
+		if count > bestCount {
+			best, bestCount = sig.bank, count
 		}
 	}
-
-	// GTBank CSV exports have no letterhead but a distinctive column set
-	if strings.Contains(lower, "trans date") && strings.Contains(lower, "remarks") && strings.Contains(lower, "reference") {
-		return BankGTB
+	if best != "" {
+		return best
 	}
 	return BankGeneric
+}
+
+// layoutSignatures are column headers that identify a bank's statement on their own.
+var layoutSignatures = []struct {
+	bank    string
+	columns []string
+}{
+	{BankGTB, []string{"originating branch", "remarks"}},
+	{BankGTB, []string{"trans date", "remarks", "reference"}}, // GTBank CSV export
+	{BankOPay, []string{"trans. time", "balance after"}},
+	{BankKuda, []string{"money in", "money out", "to / from"}},
+}
+
+func containsAll(text string, parts []string) bool {
+	for _, p := range parts {
+		if !strings.Contains(text, p) {
+			return false
+		}
+	}
+	return true
 }
 
 var accountHolderRe = regexp.MustCompile(`(?im)^[\s"]*(?:account\s*name|account\s*holder|customer\s*name|name\s*of\s*account)["\s]*[:,]["\s]*([A-Za-z][A-Za-z .,'-]{2,60}?)["\s]*(?:,|$|\s{2,}|account)`)
