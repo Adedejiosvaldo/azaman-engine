@@ -1,54 +1,48 @@
-# Tests every push to any branch and every pull request. Only main is deployed, and only when
-# its tests pass.
+# Deploys to the VPS. Never runs on pull requests or branches: only after the test workflow
+# passes on a push to main, or by hand ("Run workflow") to redeploy main.
 #
-# Needs these repository secrets (Settings -> Secrets and variables -> Actions). They are never
-# shown in logs and never available to pull requests from forks.
-#   VPS_HOST         server IP or hostname
+# Needs these repository secrets (Settings -> Secrets and variables -> Actions). Run
+# deploy/setup-ci.sh on the server to get the values.
+#   VPS_HOST         server IP
 #   VPS_USER         SSH user (e.g. root)
 #   VPS_SSH_KEY      private key whose public half is in the server's ~/.ssh/authorized_keys
 #   VPS_KNOWN_HOSTS  output of: ssh-keyscan -t ed25519 <VPS_HOST>   (pins the server's identity)
-name: test-and-deploy
+name: deploy
 
 on:
-  push:
-    branches: ["**"] # every branch: feedback before a PR is even opened
-  pull_request: # the PR shows a pass/fail check, including PRs from forks (tests only, no secrets)
-  workflow_dispatch: # "Run workflow" button: redeploy without a new commit
+  workflow_run:
+    workflows: [test]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false # never cut a deploy off halfway
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Go vet and tests
-        run: |
-          go vet ./...
-          go test ./...
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Sidecar tests (fallback mode, no model download)
-        run: |
-          pip install --quiet fastapi uvicorn pydantic httpx
-          python -m unittest sidecar.test_laya_service
-
   deploy:
-    needs: test
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Only a successful test run of a push to main (not a PR whose branch is called main).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Pick the commit
+        id: target
+        env:
+          TESTED: ${{ github.event.workflow_run.head_sha }}
+          MANUAL: ${{ github.sha }}
+        run: echo "sha=${TESTED:-$MANUAL}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
       - name: Set up SSH
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -62,8 +56,12 @@ jobs:
         env:
           HOST: ${{ secrets.VPS_HOST }}
           USER: ${{ secrets.VPS_USER }}
-        # The script runs from this commit, so a fix to deploy.sh takes effect on the same push.
-        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "$USER@$HOST" 'bash -s' < deploy/deploy.sh
+          SHA: ${{ steps.target.outputs.sha }}
+        # The script comes from the commit being deployed, so a fix to deploy.sh applies at once.
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "bad commit id"; exit 1; }
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "$USER@$HOST" "TARGET=$SHA bash -s" < deploy/deploy.sh
       - name: Remove key
         if: always()
         run: rm -f ~/.ssh/deploy_key

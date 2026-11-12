@@ -24,12 +24,22 @@ fi
 
 prev=$(git rev-parse HEAD)
 git fetch --quiet origin main
-next=$(git rev-parse origin/main)
+# TARGET is the commit CI tested. Deploying it, not whatever main is now, means a commit pushed
+# while the tests ran is never deployed untested; its own run deploys it.
+next=$(git rev-parse "${TARGET:-origin/main}^{commit}")
+if ! git merge-base --is-ancestor "$next" origin/main; then
+  log "${next:0:7} is not on main; refusing to deploy it."
+  exit 1
+fi
 if [[ "$prev" == "$next" && "${FORCE:-}" != "1" ]]; then
   log "Already at ${next:0:7}; nothing to deploy (FORCE=1 rebuilds anyway)."
   exit 0
 fi
-git merge --ff-only --quiet origin/main
+if git merge-base --is-ancestor "$next" "$prev"; then
+  log "Server is already ahead (${prev:0:7}); not moving back to ${next:0:7}."
+  exit 0
+fi
+git merge --ff-only --quiet "$next"
 log "Updating ${prev:0:7} -> ${next:0:7}"
 
 domain=$(grep -E '^DOMAIN=' deploy/.env | cut -d= -f2- | tr -d '"'"'"' ')
