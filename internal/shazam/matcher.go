@@ -409,3 +409,22 @@ func hasKinWord(purpose string) bool {
 	}
 	return false
 }
+
+var orgWords = []string{"ltd", "limited", "plc", "offer", "pay", "payments", "network", "mfb", "bank",
+	"microfinance", "store", "stores", "supermarket", "ventures", "enterprise", "enterprises", "services",
+	"global", "nig", "company", "investment", "investments", "capital", "wallet", "foundation", "church"}
+
+// IsOrganisation reports whether a counterparty is a business or institution ("J AND J VENTURES",
+// "ST BRIGHT INTL ENT"). A business is never family and a payment to one is never a favour.
+func IsOrganisation(name string) bool {
+	if FindNameRule(name) != nil {
+		return true
+	}
+	lower := strings.ToLower(name)
+	for _, w := range orgWords {
+		if ContainsWord(lower, w) {
+			return true
+		}
+	}
+	return false
+}
