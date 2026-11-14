@@ -107,3 +107,16 @@ func TestPassKeepsRulesWhenAIAbstains(t *testing.T) {
 		t.Errorf("a zero-confidence answer changed %q to %q", before, txs[0].Category)
 	}
 }
+
+// A trader whose shop name starts with "Mum" is still a business: the model must not turn a
+// payment to it into family support or an Urgent 2k favour.
+func TestPassNeverMakesABusinessAFavour(t *testing.T) {
+	txs := decodeAll(map[string]float64{"Transfer to MUM JOS - JOS VENTURES - J AND J VENTURES | MONIE POINT | 5360407936": 5100})
+	before := txs[0].Category
+	tx := &txs[0]
+	tx.Confidence = 0.5
+	apply(tx, LayaDecision{Category: "Family & Favors", Classification: "Micro-Transfer (Urgent 2k)", IsUrgent2k: true, Confidence: 0.95})
+	if tx.Flags.IsUrgent2k || tx.Category == "Family & Favors" {
+		t.Errorf("payment to a business became a favour: %s (urgent %v), was %s", tx.Category, tx.Flags.IsUrgent2k, before)
+	}
+}

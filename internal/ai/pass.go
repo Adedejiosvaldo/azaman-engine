@@ -121,6 +121,15 @@ func apply(tx *models.DecodedTransaction, dec LayaDecision) {
 	if tx.Counterparty != "" {
 		tx.DecisionBasis = "ai" // person scoring leaves AI-decided rows alone
 	}
+	// A business ("MUM JOS - J AND J VENTURES") is paid for goods, never given a favour or family
+	// support, whatever its name suggests to the model.
+	business := tx.Counterparty != "" && shazam.IsOrganisation(tx.Counterparty)
+	if business && (dec.Category == "Family & Favors" || dec.Category == "Black Tax (Family Support)") {
+		dec.Category, dec.Classification = "", ""
+	}
+	if business {
+		dec.IsUrgent2k = false
+	}
 	if dec.Category != "" {
 		tx.Category = dec.Category
 	}

@@ -237,23 +237,10 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 }
 
 // orgWords mark a business or institution rather than a person.
-var orgWords = []string{"ltd", "limited", "plc", "offer", "pay", "payments", "network", "mfb", "bank",
-	"microfinance", "store", "stores", "supermarket", "ventures", "enterprise", "enterprises", "services",
-	"global", "nig", "company", "investment", "investments", "capital", "wallet", "foundation", "church"}
-
 // isOrganisation reports whether a counterparty is a business or institution. Those are never
 // family, so they are left out of person scoring and the "who's who" review.
 func isOrganisation(name string) bool {
-	if shazam.FindNameRule(name) != nil {
-		return true
-	}
-	lower := strings.ToLower(name)
-	for _, w := range orgWords {
-		if shazam.ContainsWord(lower, w) {
-			return true
-		}
-	}
-	return false
+	return shazam.IsOrganisation(name)
 }
 
 func sortedTokens(name string) []string {
