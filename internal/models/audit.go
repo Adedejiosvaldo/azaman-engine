@@ -189,6 +189,12 @@ type AuditSummary struct {
 	// WeightedMonthlyBurn weights recent months more heavily so naira inflation is reflected in runway.
 	WeightedMonthlyBurn float64 `json:"weighted_monthly_burn"`
 	AccountHolder       string  `json:"account_holder,omitempty"`
+	// OwnFunding is money that came in from the holder's own accounts that were not uploaded, less
+	// what went back to them. It is neither income nor spend, but it paid for spending, so a
+	// statement funded this way cannot say how much the person kept. OwnFundingSources names the
+	// banks it came from ("Wema Bank", "Zenith Bank"), so the report can ask for those statements.
+	OwnFunding        float64  `json:"own_funding"`
+	OwnFundingSources []string `json:"own_funding_sources,omitempty"`
 }
 
 // CategoryBreakdown provides aggregated volume per spending category.

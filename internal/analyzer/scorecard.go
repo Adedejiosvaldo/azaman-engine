@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"azaman-engine/internal/models"
@@ -68,9 +69,11 @@ func spendBucket(tx models.DecodedTransaction, leakIDs map[string]float64) strin
 	return "unclassified"
 }
 
-// BuildSpendingMix splits real spend into buckets. Savings deposits are internal moves rather than
-// spend, but putting money aside is the clearest builder there is, so they are added to builders.
-func BuildSpendingMix(txs []models.DecodedTransaction, leakIDs map[string]float64, savingsDeposits float64) models.SpendingMix {
+// BuildSpendingMix splits real spend into buckets. Savings are internal moves rather than spend,
+// but putting money aside is the clearest builder there is, so what was saved is added to builders.
+// netSaved is deposits minus withdrawals: OPay sweeps every naira into OWealth and back out to pay,
+// so gross deposits can be many times what was really put aside.
+func BuildSpendingMix(txs []models.DecodedTransaction, leakIDs map[string]float64, netSaved float64) models.SpendingMix {
 	type bucketAgg struct {
 		amount float64
 		count  int
@@ -108,8 +111,8 @@ func BuildSpendingMix(txs []models.DecodedTransaction, leakIDs map[string]float6
 			levies += tx.Debit
 		}
 	}
-	if savingsDeposits > 0 {
-		add("builders", "Savings deposits", savingsDeposits, 0)
+	if netSaved > 0 {
+		add("builders", "Savings deposits", netSaved, 0)
 	}
 
 	var total float64
@@ -229,6 +232,17 @@ func BuildMonthly(txs []models.DecodedTransaction) models.MonthlyReport {
 	return report
 }
 
+// joinNames lists names as people write them: "Wema", "Wema and Zenith", "Wema, Zenith and GTBank".
+func joinNames(names []string) string {
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return names[0]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+}
+
 func daysInMonth(t time.Time) int {
 	return time.Date(t.Year(), t.Month()+1, 0, 0, 0, 0, 0, t.Location()).Day()
 }
@@ -276,6 +290,11 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 	periodDays float64, txCount int) models.FinancialGrade {
 	sym := currencySymbol(summary.Currency)
 	income := summary.TotalInflow - insights.BettingWinnings
+	ownFunded := IsOwnFunded(summary, income)
+	if ownFunded {
+		// Ratios below use all money in, as AnalyzeInsights does.
+		income += summary.OwnFunding
+	}
 	hasIncome := income > 0
 	months := math.Max(periodDays/daysPerMonth, 1)
 	perMonth := func(total float64) float64 { return math.Round(math.Max(total, 0) / months) }
@@ -284,8 +303,20 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 	var factors []models.GradeFactor
 
 	// 1. Money kept
-	kept := models.GradeFactor{Key: "money_kept", Label: "Money kept", MaxPoints: 30, Applicable: hasIncome}
-	if hasIncome {
+	kept := models.GradeFactor{Key: "money_kept", Label: "Money kept", MaxPoints: 30, Applicable: hasIncome && !ownFunded}
+	if ownFunded {
+		// Spending here was paid for with money from the holder's other accounts. Whether they
+		// kept anything depends on those accounts, so this factor is left out, not failed.
+		from := "your other accounts"
+		if len(summary.OwnFundingSources) > 0 {
+			from = "your " + joinNames(summary.OwnFundingSources) + " account"
+			if len(summary.OwnFundingSources) > 1 {
+				from += "s"
+			}
+		}
+		kept.Detail = fmt.Sprintf("%s of the money in this account came from %s. Add those statements to see how much you kept.",
+			cash(summary.OwnFunding), from)
+	} else if hasIncome {
 		margin := summary.NetRetained / income * 100
 		kept.Value = round2(margin)
 		kept.Points = clamp01(margin/targetKeptPct) * kept.MaxPoints
@@ -309,6 +340,9 @@ func GradeAudit(summary models.AuditSummary, insights models.NigeriaInsights, mi
 		saving.Value = round2(rate)
 		saving.Points = clamp01(rate/targetSavingsPct) * saving.MaxPoints
 		saving.Detail = fmt.Sprintf("%.1f%% of income went into savings, investments or ajo.", rate)
+		if ownFunded {
+			saving.Detail = fmt.Sprintf("%.1f%% of the money that came in (income plus transfers from your own accounts) went into savings, investments or ajo.", rate)
+		}
 		saving.TipAmount = perMonth((targetSavingsPct - rate) / 100 * income)
 		saving.Tip = fmt.Sprintf("Move %s a month into a savings wallet or ajo to reach %.0f%%.",
 			cash(saving.TipAmount), targetSavingsPct)

@@ -46,6 +46,12 @@ func AnalyzeInsights(txs []models.DecodedTransaction, internal models.InternalTr
 	}
 
 	income := summary.TotalInflow - in.BettingWinnings
+	// When the statement was paid for from the holder's other accounts, ratios use all the money
+	// that came in (income plus that funding): "88% of income saved" against a small income line
+	// would be true arithmetic and a false picture.
+	if IsOwnFunded(summary, income) {
+		income += summary.OwnFunding
+	}
 	if income > 0 {
 		in.DebtServiceRatioPct = round2(in.LoanRepayments / income * 100)
 		in.SavingsRatePct = round2((internal.NetSaved + in.AjoContributions) / income * 100)
@@ -119,6 +125,11 @@ func EstimateTax(txs []models.DecodedTransaction, periodDays float64, currency s
 		periodDays = 1
 	}
 	factor := 365.0 / periodDays
+	if periodDays < 90 {
+		// One month times twelve: a one-off payment (a gift, a refund, a friend paying you back)
+		// becomes twelve of them.
+		est.Note += fmt.Sprintf(" Worked out from %.0f days of credits, scaled to a year, so one-off payments are counted twelve times over. Upload 3 months or more for a fairer estimate.", math.Round(periodDays))
+	}
 
 	var income, deductibles, rent float64
 	for _, tx := range txs {

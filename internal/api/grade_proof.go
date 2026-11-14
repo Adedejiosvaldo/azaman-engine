@@ -41,6 +41,9 @@ type gradeProofPayload struct {
 	Summary struct {
 		Currency    string  `json:"currency"`
 		NetRetained float64 `json:"net_retained"`
+		// Money from the holder's own other accounts: the share card adds it to net retained, so
+		// a wallet funded from another bank does not read as overspent.
+		OwnFunding float64 `json:"own_funding,omitempty"`
 	} `json:"summary"`
 	AuditMeta struct {
 		FileFormat string `json:"file_format"`
@@ -68,6 +71,7 @@ func gradeProof(r *models.AuditReport, now time.Time) *models.GradeProof {
 	p.Monthly.PositiveStreak = r.Monthly.PositiveStreak
 	p.Summary.Currency = r.Summary.Currency
 	p.Summary.NetRetained = r.Summary.NetRetained
+	p.Summary.OwnFunding = r.Summary.OwnFunding
 	p.AuditMeta.FileFormat = r.AuditMeta.FileFormat
 	p.IssuedAt = now.Unix()
 

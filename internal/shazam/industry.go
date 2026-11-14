@@ -44,7 +44,7 @@ var industryWords = []struct {
 		"merchant order", "jumia", "konga", "temu", "aliexpress", "shein",
 		// items people type as a transfer purpose ("Deposits for MacBook", "Part payment inverter")
 		"laptop", "macbook", "iphone", "inverter", "furniture", "curtain", "curtains", "generator",
-		"fridge", "freezer", "television", "mattress", "gown", "clothes", "wig", "sneakers"}},
+		"fridge", "freezer", "television", "mattress", "gown", "clothes", "wig", "sneakers", "equipment"}},
 }
 
 // industryConfidence is "sure" for the rest of the engine (0.9+), so the AI and the

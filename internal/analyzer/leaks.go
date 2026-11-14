@@ -120,7 +120,7 @@ func GenerateAudit(
 	})
 
 	// 7. Scorecard: spending buckets, month-by-month flow and the letter grade
-	spendingMix := BuildSpendingMix(enrichedTxs, leakByTx, internalReport.SavingsDeposits)
+	spendingMix := BuildSpendingMix(enrichedTxs, leakByTx, internalReport.NetSaved)
 	monthly := BuildMonthly(enrichedTxs)
 	// Naira and dollars can't be added up, so with several currencies only the main one is graded.
 	gradeCurrency, mixedCurrencies := mainCurrency(enrichedTxs)
