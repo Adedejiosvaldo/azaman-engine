@@ -189,6 +189,12 @@ type AuditSummary struct {
 	// WeightedMonthlyBurn weights recent months more heavily so naira inflation is reflected in runway.
 	WeightedMonthlyBurn float64 `json:"weighted_monthly_burn"`
 	AccountHolder       string  `json:"account_holder,omitempty"`
+	// OwnFunding is money that came in from the holder's own accounts that were not uploaded, less
+	// what went back to them. It is neither income nor spend, but it paid for spending, so a
+	// statement funded this way cannot say how much the person kept. OwnFundingSources names the
+	// banks it came from ("Wema Bank", "Zenith Bank"), so the report can ask for those statements.
+	OwnFunding        float64  `json:"own_funding"`
+	OwnFundingSources []string `json:"own_funding_sources,omitempty"`
 }
 
 // CategoryBreakdown provides aggregated volume per spending category.
@@ -281,6 +287,10 @@ type StatementCheck struct {
 	ParsedCredit float64 `json:"parsed_credit"`
 	StatedRows   int     `json:"stated_rows"`
 	ParsedRows   int     `json:"parsed_rows"`
+	// SavingsBalance is the closing balance of a savings pocket printed on the same statement but
+	// not read row by row (OPay's OWealth section). It is money the holder has, so it counts
+	// towards balance and runway.
+	SavingsBalance float64 `json:"savings_balance,omitempty"`
 }
 
 // UncategorizedReport totals spending the engine could not categorise with confidence.
@@ -316,11 +326,14 @@ type MonthlyFlow struct {
 	Label   string  `json:"label"` // "Jan 2006"
 	Inflow  float64 `json:"inflow"`
 	Outflow float64 `json:"outflow"`
-	Net     float64 `json:"net"`
-	Count   int     `json:"count"`
-	Partial bool    `json:"partial"`         // the statement covers only part of this month
-	Grade   string  `json:"grade,omitempty"` // this month on its own, graded the same way
-	Score   int     `json:"score,omitempty"`
+	// OwnFunding is money moved in from the holder's own accounts that month (net of money sent
+	// back). It is not income, but it paid for spending, so Net adds it.
+	OwnFunding float64 `json:"own_funding,omitempty"`
+	Net        float64 `json:"net"`
+	Count      int     `json:"count"`
+	Partial    bool    `json:"partial"`         // the statement covers only part of this month
+	Grade      string  `json:"grade,omitempty"` // this month on its own, graded the same way
+	Score      int     `json:"score,omitempty"`
 }
 
 // MonthlyReport is the month-by-month cashflow with simple streak stats.

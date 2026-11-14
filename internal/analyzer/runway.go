@@ -30,13 +30,26 @@ func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models
 	type closing struct {
 		balance float64
 		at      time.Time
+		seen    bool // the account shows a non-zero balance somewhere, so it has a balance column
 	}
 	closings := make(map[string]*closing)
 	monthly := make(map[string]float64)
+	var selfIn, selfOut float64
+	var sources []string
 
 	for _, tx := range txs {
 		if tx.Currency != "" {
 			currency = tx.Currency
+		}
+
+		if tx.Flags.IsSelfTransfer && !tx.Flags.IsSavings {
+			selfIn += tx.Credit
+			selfOut += tx.Debit
+			if tx.Credit > 0 {
+				if b := fundingBank(tx.RawDescription); b != "" && !containsString(sources, b) {
+					sources = append(sources, b)
+				}
+			}
 		}
 
 		if tx.IsEarning() {
@@ -59,19 +72,24 @@ func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models
 		}
 
 		// Closing balance = balance on the most recent row. Statements can be newest-first,
-		// so use the date rather than row order; ties keep the later row.
-		if tx.Balance != 0 {
-			c, ok := closings[tx.Account]
-			if !ok {
-				closings[tx.Account] = &closing{balance: tx.Balance, at: tx.ParsedDate}
-			} else if !tx.ParsedDate.Before(c.at) {
+		// so use the date rather than row order; ties keep the later row. A zero balance counts
+		// (OPay's wallet sweeps to OWealth and ends most days on ₦0.00), but only for an account
+		// that shows a non-zero balance somewhere: a file without a balance column reads all zeros.
+		c, ok := closings[tx.Account]
+		if !ok {
+			closings[tx.Account] = &closing{balance: tx.Balance, at: tx.ParsedDate, seen: tx.Balance != 0}
+		} else {
+			if !tx.ParsedDate.Before(c.at) {
 				c.balance, c.at = tx.Balance, tx.ParsedDate
 			}
-			haveBalance = true
+			c.seen = c.seen || tx.Balance != 0
 		}
 	}
 	for _, c := range closings {
-		currentBalance += c.balance
+		if c.seen {
+			currentBalance += c.balance
+			haveBalance = true
+		}
 	}
 
 	netRetained := totalInflow - totalOutflow
@@ -113,7 +131,14 @@ func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models
 		periodEnd = maxDate.Format("2006-01-02")
 	}
 
+	ownFunding := math.Max(selfIn-selfOut, 0)
+	if ownFunding == 0 {
+		sources = nil
+	}
+
 	return models.AuditSummary{
+		OwnFunding:          round2(ownFunding),
+		OwnFundingSources:   sources,
 		TotalInflow:         round2(totalInflow),
 		TotalOutflow:        round2(totalOutflow),
 		NetRetained:         round2(netRetained),
@@ -128,6 +153,55 @@ func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models
 		AvgMonthlyBurn:      round2(avgMonthlyBurn),
 		WeightedMonthlyBurn: round2(weightedBurn),
 	}
+}
+
+// addPocketBalance adds a savings pocket's closing balance (read from the statement header, not
+// its rows) to the balance and works runway out again.
+func addPocketBalance(s *models.AuditSummary, pocket float64) {
+	if pocket <= 0 {
+		return
+	}
+	s.CurrentBalance = round2(s.CurrentBalance + pocket)
+	if s.WeightedMonthlyBurn > 0 && s.RunwayMonths < 999 {
+		s.RunwayMonths = math.Round(s.CurrentBalance/s.WeightedMonthlyBurn*10) / 10
+	}
+}
+
+// ownFundingShare is the share of money in (income + own funding) above which a statement is
+// "funded from elsewhere": spending was paid for mostly with money moved in from the holder's own
+// accounts, so this statement alone cannot say how much they kept.
+const ownFundingShare = 0.25
+
+// IsOwnFunded reports whether the statement was paid for largely from the holder's other accounts.
+func IsOwnFunded(s models.AuditSummary, income float64) bool {
+	in := math.Max(income, 0) + s.OwnFunding
+	return s.OwnFunding > 0 && in > 0 && s.OwnFunding/in >= ownFundingShare
+}
+
+// fundingBank names the bank a self-transfer came from: the first memo segment that names a bank,
+// as in "Transfer from JOSEPH ADEWUNMI | Wema Bank PLC | 040****560".
+func fundingBank(desc string) string {
+	segs := strings.Split(desc, "|")
+	for _, s := range segs[1:] {
+		s = strings.TrimSpace(s)
+		if s == "" || !bankSegmentRe.MatchString(s) || accountNumberRe.MatchString(s) {
+			continue
+		}
+		for _, suffix := range []string{" PLC", " Plc", " plc", " Limited", " LIMITED", " Ltd", " LTD"} {
+			s = strings.TrimSuffix(s, suffix)
+		}
+		return strings.TrimSpace(s)
+	}
+	return ""
+}
+
+func containsString(list []string, s string) bool {
+	for _, v := range list {
+		if strings.EqualFold(v, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // weightedMonthlyBurn returns an exponentially weighted average of complete calendar months

@@ -181,7 +181,11 @@ func HandleAudit(c *gin.Context) {
 	}
 
 	// 7. Leak Analysis & Runway Calculation
-	audit := analyzer.GenerateAudit(
+	var pockets float64
+	for _, a := range accounts {
+		pockets += a.Check.SavingsBalance
+	}
+	audit := analyzer.GenerateAuditWithPockets(
 		decodedTxs,
 		bankName,
 		sessionID,
@@ -189,9 +193,14 @@ func HandleAudit(c *gin.Context) {
 		fileSize,
 		startTime,
 		accountHolder,
+		pockets,
 	)
 	audit.Check = check
 	analyzer.FillAccountTotals(accounts, audit.Transactions)
+	for i := range accounts {
+		// OWealth and similar pockets are printed as a balance only; the money is still the holder's.
+		accounts[i].ClosingBalance += accounts[i].Check.SavingsBalance
+	}
 	audit.Accounts = accounts
 	audit.GradeProof = gradeProof(&audit, time.Now())
 

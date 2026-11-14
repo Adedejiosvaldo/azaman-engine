@@ -92,7 +92,11 @@ func FillAccountTotals(accounts []models.AccountSummary, txs []models.DecodedTra
 	for i, a := range accounts {
 		index[a.Label] = i
 	}
-	type span struct{ first, last, balanceAt time.Time }
+	type span struct {
+		first, last, balanceAt time.Time
+		balanceSeen            bool // any non-zero balance: the file has a balance column
+		started                bool
+	}
 	spans := make([]span, len(accounts))
 
 	for _, tx := range txs {
@@ -118,16 +122,22 @@ func FillAccountTotals(accounts []models.AccountSummary, txs []models.DecodedTra
 				s.last = tx.ParsedDate
 			}
 		}
-		if tx.Balance != 0 && !tx.ParsedDate.Before(s.balanceAt) {
+		// Zero balances count (an OPay wallet sweeps to OWealth and ends on ₦0.00); see CalculateRunway.
+		if !s.started || !tx.ParsedDate.Before(s.balanceAt) {
 			a.ClosingBalance = tx.Balance
 			s.balanceAt = tx.ParsedDate
+			s.started = true
 		}
+		s.balanceSeen = s.balanceSeen || tx.Balance != 0
 	}
 
 	for i := range accounts {
 		a := &accounts[i]
 		a.Inflow = round2(a.Inflow)
 		a.Outflow = round2(a.Outflow)
+		if !spans[i].balanceSeen {
+			a.ClosingBalance = 0
+		}
 		a.ClosingBalance = round2(a.ClosingBalance)
 		if a.Currency == "" {
 			a.Currency = "NGN"

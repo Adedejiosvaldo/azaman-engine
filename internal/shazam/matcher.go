@@ -138,6 +138,15 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		}
 	}
 
+	// Food delivery apps are listed as late-night food because that is when they leak. Ordered in the
+	// day, with the time printed, a Chowdeck order is lunch.
+	if hasTime && !decoded.Flags.IsMidnightLeak && decoded.Category == "Late Night Food & Lounges" && isFoodDelivery(decoded.Merchant) {
+		hour := raw.ParsedDate.Hour()
+		if hour < 22 && hour > 3 {
+			decoded.Category = "Food & Dining"
+		}
+	}
+
 	// 4. Urgent 2k detection: Micro-transfers between ₦1,000 and ₦15,000 to individuals/favors
 	isNonFavor := decoded.Flags.IsSavings || decoded.Flags.IsLoan || decoded.Flags.IsBankFee || decoded.Flags.IsSelfTransfer
 	if !isCredit && !isNonFavor && (currency == "NGN" || currency == "") && absAmount >= 1000 && absAmount <= 15000 {
@@ -162,6 +171,13 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 				decoded.Category = "Family & Favors"
 			}
 		}
+	}
+
+	// A memo that names a relative ("for mum", "my sister's fees") is family support, not a favour.
+	if !isCredit && decoded.Category == "Family & Favors" && hasKinWord(purpose) {
+		decoded.Category = "Black Tax (Family Support)"
+		decoded.Classification = "Family Support"
+		decoded.Flags.IsUrgent2k = false
 	}
 
 	// Urgent 2k is ₦1,000-₦15,000; smaller or larger person-to-person transfers are plain transfers.
@@ -359,6 +375,34 @@ func titleCase(s string) string {
 
 func containsAnyWord(lower string, words ...string) bool {
 	for _, w := range words {
+		if ContainsWord(lower, w) {
+			return true
+		}
+	}
+	return false
+}
+
+// foodDeliveryNames are delivery apps among the late-night food rules (the rest are bars and lounges).
+var foodDeliveryNames = []string{"chowdeck", "glovo", "foodcourt", "jumia food", "heyfood", "hey food"}
+
+func isFoodDelivery(merchant string) bool {
+	lower := strings.ToLower(merchant)
+	for _, n := range foodDeliveryNames {
+		if strings.Contains(lower, n) {
+			return true
+		}
+	}
+	return false
+}
+
+// kinWords name a relative. Broader support words ("gift", "allowance", "for the week") stay
+// favours: they are said to friends and helpers too.
+var kinWords = []string{"mum", "mummy", "mom", "mama", "dad", "daddy", "papa", "brother", "sister", "my wife", "my husband",
+	"iya", "baba", "aunty", "auntie", "uncle", "cousin", "niece", "nephew", "grandma", "grandpa", "black tax"}
+
+func hasKinWord(purpose string) bool {
+	lower := strings.ToLower(purpose)
+	for _, w := range kinWords {
 		if ContainsWord(lower, w) {
 			return true
 		}

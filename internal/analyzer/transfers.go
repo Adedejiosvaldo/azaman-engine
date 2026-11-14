@@ -29,6 +29,9 @@ var (
 	familyKeywords       = []string{"mum", "dad", "mama", "papa", "mummy", "daddy", "sister", "brother", "family", "upkeep", "parents", "cousin", "aunty", "uncle", "wife", "husband", "iya", "baba", "black tax"}
 )
 
+// blackTaxCategory is money sent to relatives: an essential, never a leak.
+const blackTaxCategory = "Black Tax (Family Support)"
+
 // reversalWindow is how far after a failed debit we look for its reversal credit.
 const reversalWindow = 7 * 24 * time.Hour
 
@@ -257,7 +260,7 @@ func DetectRecurring(txs []models.DecodedTransaction) []models.RecurringPayment 
 		case txs[idxs[0]].Category == "Rent & Housing":
 			kind, category = "Rent", "Rent & Housing"
 		case containsAnyWord(lower, familyKeywords) || txs[idxs[0]].Category == "Family & Favors":
-			kind, category = "Black Tax (Family Support)", "Black Tax (Family Support)"
+			kind, category = blackTaxCategory, blackTaxCategory
 		}
 
 		var total float64

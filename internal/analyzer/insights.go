@@ -3,7 +3,9 @@ package analyzer
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
+	"time"
 
 	"azaman-engine/internal/models"
 )
@@ -15,6 +17,8 @@ func AnalyzeInsights(txs []models.DecodedTransaction, internal models.InternalTr
 		RecurringPayments: recurring,
 		Warnings:          []string{},
 	}
+	var shortPlans int
+	var shortPlanSpend float64
 
 	for _, tx := range txs {
 		if tx.Flags.IsReversal {
@@ -34,6 +38,10 @@ func AnalyzeInsights(txs []models.DecodedTransaction, internal models.InternalTr
 			continue
 		case tx.Category == "Airtime & Utilities" && isAirtime(tx):
 			in.AirtimeDataSpend += tx.Debit
+			if shortDataPlanRe.MatchString(tx.RawDescription) {
+				shortPlans++
+				shortPlanSpend += tx.Debit
+			}
 		case tx.Category == "Ajo & Thrift":
 			in.AjoContributions += tx.Debit
 		case tx.Category == "Religious Giving":
@@ -46,6 +54,12 @@ func AnalyzeInsights(txs []models.DecodedTransaction, internal models.InternalTr
 	}
 
 	income := summary.TotalInflow - in.BettingWinnings
+	// When the statement was paid for from the holder's other accounts, ratios use all the money
+	// that came in (income plus that funding): "88% of income saved" against a small income line
+	// would be true arithmetic and a false picture.
+	if IsOwnFunded(summary, income) {
+		income += summary.OwnFunding
+	}
 	if income > 0 {
 		in.DebtServiceRatioPct = round2(in.LoanRepayments / income * 100)
 		in.SavingsRatePct = round2((internal.NetSaved + in.AjoContributions) / income * 100)
@@ -60,11 +74,27 @@ func AnalyzeInsights(txs []models.DecodedTransaction, internal models.InternalTr
 	if in.DebtServiceRatioPct > 30 {
 		in.Warnings = append(in.Warnings, fmt.Sprintf("Loan repayments take %.1f%% of income; above 30%% is a debt-trap risk.", in.DebtServiceRatioPct))
 	}
-	if income > 0 && in.AirtimeDataSpend/income > 0.05 {
+	// Buying data a day or two at a time is the habit to name, whatever the income: it shows up as
+	// a count and an amount the person recognises. The saving depends on today's bundle prices, so
+	// no saving is claimed.
+	months := 1.0
+	if summary.PeriodStart != "" && summary.PeriodEnd != "" {
+		if a, err1 := time.Parse("2006-01-02", summary.PeriodStart); err1 == nil {
+			if b, err2 := time.Parse("2006-01-02", summary.PeriodEnd); err2 == nil {
+				months = math.Max(b.Sub(a).Hours()/24/daysPerMonth, 1)
+			}
+		}
+	}
+	shortHabit := float64(shortPlans)/months >= shortPlanHabit
+	if shortHabit {
+		in.Warnings = append(in.Warnings, fmt.Sprintf("%s%s went on %d short data plans (3 days or less). Compare that with a monthly plan on the same network.",
+			sym, money(shortPlanSpend), shortPlans))
+	}
+	if !shortHabit && income > 0 && in.AirtimeDataSpend/income > 0.05 {
 		in.Warnings = append(in.Warnings, fmt.Sprintf("Airtime & data is %.1f%% of income; a monthly bundle is usually cheaper than daily top-ups.", in.AirtimeDataSpend/income*100))
 	}
 	if in.BlackTax > 0 && income > 0 {
-		in.Warnings = append(in.Warnings, fmt.Sprintf("Recurring family support (black tax) is %.1f%% of income; budget it as a fixed cost.", in.BlackTax/income*100))
+		in.Warnings = append(in.Warnings, fmt.Sprintf("Family support (black tax) is %.1f%% of income; budget it as a fixed cost.", in.BlackTax/income*100))
 	}
 	if in.SavingsRatePct < 10 && income > 0 {
 		in.Warnings = append(in.Warnings, fmt.Sprintf("Savings rate is %.1f%%; aim for at least 10%%.", in.SavingsRatePct))
@@ -81,6 +111,13 @@ func AnalyzeInsights(txs []models.DecodedTransaction, internal models.InternalTr
 	in.SubscriptionsTV = round2(in.SubscriptionsTV)
 	return in
 }
+
+// shortDataPlanRe matches data bundles that last three days or less: "2.5GB 2 Day Plan",
+// "750MB Daily Plan", "1GB 3 Days Plan", "1GB 3-Days Plan".
+var shortDataPlanRe = regexp.MustCompile(`(?i)\b(?:[1-3]\s*-?\s*days?|daily|24\s*hrs?)\b`)
+
+// shortPlanHabit is how many short data plans a month make a habit worth naming.
+const shortPlanHabit = 8
 
 func isAirtime(tx models.DecodedTransaction) bool {
 	return !strings.Contains(tx.Merchant, "Power") && !strings.Contains(tx.Merchant, "Electric")
@@ -119,6 +156,11 @@ func EstimateTax(txs []models.DecodedTransaction, periodDays float64, currency s
 		periodDays = 1
 	}
 	factor := 365.0 / periodDays
+	if periodDays < 90 {
+		// One month times twelve: a one-off payment (a gift, a refund, a friend paying you back)
+		// becomes twelve of them.
+		est.Note += fmt.Sprintf(" Worked out from %.0f days of credits, scaled to a year, so one-off payments are counted twelve times over. Upload 3 months or more for a fairer estimate.", math.Round(periodDays))
+	}
 
 	var income, deductibles, rent float64
 	for _, tx := range txs {

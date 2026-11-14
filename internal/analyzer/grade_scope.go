@@ -64,7 +64,7 @@ func gradeSubset(txs []models.DecodedTransaction, leakIDs map[string]float64,
 	internal.NetSaved = round2(internal.SavingsDeposits - internal.SavingsWithdrawal)
 
 	insights := AnalyzeInsights(txs, internal, recurring, summary)
-	mix := BuildSpendingMix(txs, leakIDs, internal.SavingsDeposits)
+	mix := BuildSpendingMix(txs, leakIDs, internal.NetSaved)
 	return GradeAudit(summary, insights, mix, periodDays, len(txs))
 }
 
