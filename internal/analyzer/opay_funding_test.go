@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -154,5 +155,61 @@ func TestShortStatementTaxNoteWarnsAboutScaling(t *testing.T) {
 	report := GenerateAudit(opayFundedStatement(), "OPay", "s1", "pdf", 0, time.Now(), "TUNDE OLUMIDE BAKARE")
 	if !strings.Contains(report.Tax.Note, "scaled to a year") {
 		t.Errorf("a one-month tax estimate should say it was scaled up, got %q", report.Tax.Note)
+	}
+}
+
+func TestRelativesAreFamilySupportNotLeaks(t *testing.T) {
+	memo := shazam.MatchAndDecode(models.RawTransaction{
+		Description: "Transfer to ADA OKORO | OPay | 8111111111 | for mum", Debit: 5000})
+	if memo.Category != "Black Tax (Family Support)" || memo.Flags.IsUrgent2k {
+		t.Errorf("a memo naming mum is family support, got %s (urgent %v)", memo.Category, memo.Flags.IsUrgent2k)
+	}
+	friend := shazam.MatchAndDecode(models.RawTransaction{
+		Description: "Transfer to ADA OKORO | OPay | 8111111111 | for the week", Debit: 5000})
+	if !friend.Flags.IsUrgent2k {
+		t.Errorf("a support memo with no relative named stays an Urgent 2k favour, got %s", friend.Category)
+	}
+}
+
+func TestOWealthPocketCountsTowardsRunway(t *testing.T) {
+	report := GenerateAuditWithPockets(opayFundedStatement(), "OPay", "s1", "pdf", 0, time.Now(), "TUNDE OLUMIDE BAKARE", 70600)
+	if report.Summary.CurrentBalance != 70600 {
+		t.Errorf("balance should include the OWealth pocket, got %v", report.Summary.CurrentBalance)
+	}
+	want := math.Round(70600/report.Summary.WeightedMonthlyBurn*10) / 10
+	if report.Summary.RunwayMonths != want || want == 0 {
+		t.Errorf("runway = %v, want %v", report.Summary.RunwayMonths, want)
+	}
+}
+
+func TestShortDataPlansAreNamed(t *testing.T) {
+	txs := opayFundedStatement()
+	for d := 8; d <= 26; d += 2 {
+		when := time.Date(2026, 9, d, 8, 0, 0, 0, time.UTC)
+		tx := shazam.MatchAndDecode(models.RawTransaction{Description: "Mobile Data | 8031****27 | MTN | 2.5GB 2 Day Plan",
+			Debit: 900, ParsedDate: when, Date: when.Format("02 Jan 2006 15:04:05"), Currency: "NGN"})
+		tx.Account = "OPay"
+		txs = append(txs, tx)
+	}
+	report := GenerateAudit(txs, "OPay", "s1", "pdf", 0, time.Now(), "TUNDE OLUMIDE BAKARE")
+	found := false
+	for _, w := range report.Insights.Warnings {
+		if strings.Contains(w, "₦9,900 went on 11 short data plans") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("11 two-day plans should be named, warnings: %v", report.Insights.Warnings)
+	}
+}
+
+func TestMonthlyNetCountsOwnFunding(t *testing.T) {
+	report := GenerateAudit(opayFundedStatement(), "OPay", "s1", "pdf", 0, time.Now(), "TUNDE OLUMIDE BAKARE")
+	m := report.Monthly.Months[0]
+	if m.OwnFunding != 140000 {
+		t.Errorf("month own funding = %v, want 140000", m.OwnFunding)
+	}
+	if want := math.Round((m.Inflow+m.OwnFunding-m.Outflow)*100) / 100; m.Net != want || m.Net <= 0 {
+		t.Errorf("month net = %v, want %v (income + own funding - spend)", m.Net, want)
 	}
 }

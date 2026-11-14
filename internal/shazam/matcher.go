@@ -173,6 +173,13 @@ func MatchAndDecode(raw models.RawTransaction) models.DecodedTransaction {
 		}
 	}
 
+	// A memo that names a relative ("for mum", "my sister's fees") is family support, not a favour.
+	if !isCredit && decoded.Category == "Family & Favors" && hasKinWord(purpose) {
+		decoded.Category = "Black Tax (Family Support)"
+		decoded.Classification = "Family Support"
+		decoded.Flags.IsUrgent2k = false
+	}
+
 	// Urgent 2k is ₦1,000-₦15,000; smaller or larger person-to-person transfers are plain transfers.
 	if decoded.Classification == "Micro-Transfer (Urgent 2k)" && !decoded.Flags.IsUrgent2k {
 		decoded.Classification = "Personal Transfer"
@@ -382,6 +389,21 @@ func isFoodDelivery(merchant string) bool {
 	lower := strings.ToLower(merchant)
 	for _, n := range foodDeliveryNames {
 		if strings.Contains(lower, n) {
+			return true
+		}
+	}
+	return false
+}
+
+// kinWords name a relative. Broader support words ("gift", "allowance", "for the week") stay
+// favours: they are said to friends and helpers too.
+var kinWords = []string{"mum", "mummy", "mom", "mama", "dad", "daddy", "papa", "brother", "sister", "my wife", "my husband",
+	"iya", "baba", "aunty", "auntie", "uncle", "cousin", "niece", "nephew", "grandma", "grandpa", "black tax"}
+
+func hasKinWord(purpose string) bool {
+	lower := strings.ToLower(purpose)
+	for _, w := range kinWords {
+		if ContainsWord(lower, w) {
 			return true
 		}
 	}

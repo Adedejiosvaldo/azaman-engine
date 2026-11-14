@@ -24,8 +24,10 @@ func TestSharedSurnameNeedsMoreThanOnePerson(t *testing.T) {
 		reasonsFor[r.Name] = r.Reasons
 	}
 	for _, tx := range txs[:2] {
-		if tx.Category != "Family & Favors" {
-			t.Errorf("%s: relative sharing the family name should be family, got %s", tx.Counterparty, tx.Category)
+		// Relatives are family support (black tax), an essential: never an Urgent 2k leak.
+		if tx.Category != "Black Tax (Family Support)" || tx.Flags.IsUrgent2k {
+			t.Errorf("%s: relative sharing the family name should be family support, got %s (urgent %v)",
+				tx.Counterparty, tx.Category, tx.Flags.IsUrgent2k)
 		}
 	}
 	for _, r := range reasonsFor["Chidi Tunde"] {

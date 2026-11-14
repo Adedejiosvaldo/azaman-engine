@@ -287,6 +287,10 @@ type StatementCheck struct {
 	ParsedCredit float64 `json:"parsed_credit"`
 	StatedRows   int     `json:"stated_rows"`
 	ParsedRows   int     `json:"parsed_rows"`
+	// SavingsBalance is the closing balance of a savings pocket printed on the same statement but
+	// not read row by row (OPay's OWealth section). It is money the holder has, so it counts
+	// towards balance and runway.
+	SavingsBalance float64 `json:"savings_balance,omitempty"`
 }
 
 // UncategorizedReport totals spending the engine could not categorise with confidence.
@@ -322,11 +326,14 @@ type MonthlyFlow struct {
 	Label   string  `json:"label"` // "Jan 2006"
 	Inflow  float64 `json:"inflow"`
 	Outflow float64 `json:"outflow"`
-	Net     float64 `json:"net"`
-	Count   int     `json:"count"`
-	Partial bool    `json:"partial"`         // the statement covers only part of this month
-	Grade   string  `json:"grade,omitempty"` // this month on its own, graded the same way
-	Score   int     `json:"score,omitempty"`
+	// OwnFunding is money moved in from the holder's own accounts that month (net of money sent
+	// back). It is not income, but it paid for spending, so Net adds it.
+	OwnFunding float64 `json:"own_funding,omitempty"`
+	Net        float64 `json:"net"`
+	Count      int     `json:"count"`
+	Partial    bool    `json:"partial"`         // the statement covers only part of this month
+	Grade      string  `json:"grade,omitempty"` // this month on its own, graded the same way
+	Score      int     `json:"score,omitempty"`
 }
 
 // MonthlyReport is the month-by-month cashflow with simple streak stats.

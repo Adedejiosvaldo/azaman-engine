@@ -125,11 +125,13 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 		}
 		sized := p.round + p.odd // payments of ₦1,000+ whose roundness is meaningful
 		score, reasons := 0.0, []string{}
+		kin := false // shares the family surname: a relative, not a friend
 		if shared := sharedTokens(p.tokens, holder); len(shared) > 0 && len(shared) < len(p.tokens) {
 			family := false
 			for _, t := range shared {
 				family = family || sharedBy[t] >= 2
 			}
+			kin = family
 			if family {
 				score += 2.5
 				reasons = append(reasons, "shares your family name ("+strings.Title(strings.Join(shared, ", "))+")")
@@ -188,6 +190,13 @@ func ScorePeople(txs []models.DecodedTransaction, accountHolder string) []models
 				tx.Classification = "Personal Transfer"
 				if tx.Flags.IsUrgent2k {
 					tx.Classification = "Micro-Transfer (Urgent 2k)"
+				}
+				if kin {
+					// Money to relatives is family support (black tax): a cost of living, shown
+					// under family upkeep, never a leak. Urgent 2k is for favours to friends.
+					tx.Category = blackTaxCategory
+					tx.Classification = "Family Support"
+					tx.Flags.IsUrgent2k = false
 				}
 				tx.Confidence = 0.85
 				tx.DecisionBasis = "person"

@@ -126,3 +126,19 @@ func TestJoinWrappedMidWordBreak(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+// The OWealth section's summary block: its closing balance is money the holder still has.
+func TestOPayValueUnderReadsSavingsClosingBalance(t *testing.T) {
+	rows := pdf.Rows{
+		{Position: 500, Content: pdf.TextHorizontal{{X: 71, S: "Opening Balance"}, {X: 250, S: "Total Debit"}, {X: 430, S: "Debit Count"}}},
+		{Position: 488, Content: pdf.TextHorizontal{{X: 71, S: "₦15,256.60"}, {X: 250, S: "₦801,664.70"}, {X: 430, S: "246"}}},
+		{Position: 470, Content: pdf.TextHorizontal{{X: 71, S: "Closing Balance"}, {X: 250, S: "Total Credit"}, {X: 430, S: "Credit Count"}}},
+		{Position: 458, Content: pdf.TextHorizontal{{X: 71, S: "₦1,384.27"}, {X: 250, S: "₦740,446.67"}, {X: 430, S: "67"}}},
+	}
+	if v, ok := opayValueUnder(rows, "Closing Balance"); !ok || v != 1384.27 {
+		t.Errorf("closing balance = %v (found %v), want 1384.27", v, ok)
+	}
+	if v, ok := opayValueUnder(rows, "Total Credit"); !ok || v != 740446.67 {
+		t.Errorf("total credit = %v (found %v), want 740446.67", v, ok)
+	}
+}

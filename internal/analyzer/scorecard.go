@@ -184,6 +184,8 @@ func BuildMonthly(txs []models.DecodedTransaction) models.MonthlyReport {
 		case tx.IsSpend():
 			m.Outflow += tx.Debit
 			m.Count++
+		case tx.Flags.IsSelfTransfer && !tx.Flags.IsSavings:
+			m.OwnFunding += tx.Credit - tx.Debit
 		}
 	}
 
@@ -201,7 +203,8 @@ func BuildMonthly(txs []models.DecodedTransaction) models.MonthlyReport {
 	firstKey, lastKey := keys[0], keys[len(keys)-1]
 	for _, k := range keys {
 		m := byMonth[k]
-		m.Net = round2(m.Inflow - m.Outflow)
+		m.OwnFunding = round2(math.Max(m.OwnFunding, 0))
+		m.Net = round2(m.Inflow + m.OwnFunding - m.Outflow)
 		m.Inflow = round2(m.Inflow)
 		m.Outflow = round2(m.Outflow)
 		m.Partial = (k == firstKey && minDate.Day() > 3) ||

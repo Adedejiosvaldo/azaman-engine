@@ -155,6 +155,18 @@ func CalculateRunway(txs []models.DecodedTransaction, periodDays float64) models
 	}
 }
 
+// addPocketBalance adds a savings pocket's closing balance (read from the statement header, not
+// its rows) to the balance and works runway out again.
+func addPocketBalance(s *models.AuditSummary, pocket float64) {
+	if pocket <= 0 {
+		return
+	}
+	s.CurrentBalance = round2(s.CurrentBalance + pocket)
+	if s.WeightedMonthlyBurn > 0 && s.RunwayMonths < 999 {
+		s.RunwayMonths = math.Round(s.CurrentBalance/s.WeightedMonthlyBurn*10) / 10
+	}
+}
+
 // ownFundingShare is the share of money in (income + own funding) above which a statement is
 // "funded from elsewhere": spending was paid for mostly with money moved in from the holder's own
 // accounts, so this statement alone cannot say how much they kept.

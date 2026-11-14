@@ -255,7 +255,14 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 			if strings.Contains(text, "Opening Balance") {
 				sections++
 				if sections > 1 {
-					break // next account section
+					// Next account section: the OWealth savings pocket. Its rows repeat wallet
+					// movements, but its closing balance is money the holder still has.
+					if stated != nil {
+						if v, ok := opayValueUnder(rows[i:min(i+4, len(rows))], "Closing Balance"); ok {
+							stated.SavingsBalance = v
+						}
+					}
+					break
 				}
 			}
 			if stated == nil && strings.Contains(text, "Total Debit") && i+3 < len(rows) {
@@ -408,28 +415,7 @@ func parseOPayPDFRows(pdfReader *pdf.Reader, detectedBank, currency string) ([]m
 //
 // Values sit under their labels, so each is the amount on the next row nearest the label's x.
 func opayStatedTotals(rows pdf.Rows) *models.StatementCheck {
-	valueUnder := func(label string) (float64, bool) {
-		for i := 0; i+1 < len(rows); i++ {
-			for _, c := range rows[i].Content {
-				if !strings.HasPrefix(strings.TrimSpace(c.S), label) {
-					continue
-				}
-				best, found := 0.0, false
-				dist := math.Inf(1)
-				for _, v := range rows[i+1].Content {
-					s := strings.TrimSpace(v.S)
-					if s == "" || s == "₦" {
-						continue
-					}
-					if d := math.Abs(v.X - c.X); d < dist && d < 40 {
-						dist, best, found = d, ParseAmount(s), true
-					}
-				}
-				return best, found
-			}
-		}
-		return 0, false
-	}
+	valueUnder := func(label string) (float64, bool) { return opayValueUnder(rows, label) }
 	debit, ok1 := valueUnder("Total Debit")
 	credit, ok2 := valueUnder("Total Credit")
 	nd, ok3 := valueUnder("Debit Count")
@@ -442,6 +428,31 @@ func opayStatedTotals(rows pdf.Rows) *models.StatementCheck {
 		check.StatedRows = int(nd + nc)
 	}
 	return check
+}
+
+// opayValueUnder returns the amount printed under label in an OPay summary block: the value on
+// the next row nearest the label's x.
+func opayValueUnder(rows pdf.Rows, label string) (float64, bool) {
+	for i := 0; i+1 < len(rows); i++ {
+		for _, c := range rows[i].Content {
+			if !strings.HasPrefix(strings.TrimSpace(c.S), label) {
+				continue
+			}
+			best, found := 0.0, false
+			dist := math.Inf(1)
+			for _, v := range rows[i+1].Content {
+				s := strings.TrimSpace(v.S)
+				if s == "" || s == "₦" {
+					continue
+				}
+				if d := math.Abs(v.X - c.X); d < dist && d < 40 {
+					dist, best, found = d, ParseAmount(s), true
+				}
+			}
+			return best, found
+		}
+	}
+	return 0, false
 }
 
 // CheckTotals compares parsed transactions with the statement's printed totals. Amounts may differ

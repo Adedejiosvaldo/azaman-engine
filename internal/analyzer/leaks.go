@@ -18,6 +18,22 @@ func GenerateAudit(
 	startTime time.Time,
 	accountHolder string,
 ) models.AuditReport {
+	return GenerateAuditWithPockets(rawTxs, bankName, sessionID, fileFormat, fileSize, startTime, accountHolder, 0)
+}
+
+// GenerateAuditWithPockets is GenerateAudit for statements that also print a savings pocket's
+// closing balance without its rows (OPay's OWealth). pocketBalance is added to the balance, so
+// runway counts money the holder has even when the wallet itself ends on ₦0.00.
+func GenerateAuditWithPockets(
+	rawTxs []models.DecodedTransaction,
+	bankName string,
+	sessionID string,
+	fileFormat string,
+	fileSize int64,
+	startTime time.Time,
+	accountHolder string,
+	pocketBalance float64,
+) models.AuditReport {
 	// 0. Nigerian-specific pre-passes on a private copy. Order matters: reversals cancel failed
 	// debits first, then self/savings transfers drop out, then recurring payments leave Urgent 2k.
 	txs := make([]models.DecodedTransaction, len(rawTxs))
@@ -71,6 +87,7 @@ func GenerateAudit(
 	bankChargesReport := AnalyzeBankCharges(enrichedTxs)
 	summary := CalculateRunway(enrichedTxs, periodDays)
 	summary.AccountHolder = accountHolder
+	addPocketBalance(&summary, pocketBalance)
 	insights := AnalyzeInsights(enrichedTxs, internalReport, recurring, summary)
 	taxEstimate := EstimateTax(enrichedTxs, periodDays, summary.Currency)
 	businessSplit := AnalyzeBusinessSplit(enrichedTxs)
